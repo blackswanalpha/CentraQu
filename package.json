@@ -1,0 +1,45 @@
+{
+  "name": "centraqu",
+  "version": "1.0.0",
+  "description": "Business Management Platform for Audit Certification and Consulting",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [
+    "audit",
+    "consulting",
+    "business-management"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@heroicons/react": "^2.2.0",
+    "@hookform/resolvers": "^5.2.2",
+    "autoprefixer": "^10.4.21",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.554.0",
+    "next": "^16.0.1",
+    "postcss": "^8.5.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.66.1",
+    "recharts": "^3.5.0",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.9.3",
+    "yup": "^1.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "eslint": "^9.38.0",
+    "eslint-config-next": "^16.0.0"
+  }
+}

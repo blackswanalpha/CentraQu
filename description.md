@@ -1,0 +1,1 @@
+AssureHub is a premier business management platform tailored for audit certification and consulting. Built with a high-performance Next.js frontend and a secure Django backend, it empowers professionals with advanced workspace management, real-time compliance tracking, and automated reporting tools to optimize efficiency.
