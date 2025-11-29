@@ -61,15 +61,15 @@ export interface Contract {
   certificate_validity_extension_allowed?: boolean;
 
   // Fees
-  fee_per_standard_year_1?: number;
-  fee_per_standard_year_2?: number;
-  fee_per_standard_year_3?: number;
+  fee_per_standard_year_1?: string | number;
+  fee_per_standard_year_2?: string | number;
+  fee_per_standard_year_3?: string | number;
   recertification_fee_tbd?: boolean;
   recertification_fee?: number;
   additional_fees_description?: string;
 
   // Total Financials
-  contract_value: number;
+  contract_value: string | number;
   currency: string;
   payment_schedule?: string;
 
@@ -101,9 +101,9 @@ export interface Contract {
 
   // Computed
   total_standards_count?: number;
-  total_year_1_fee?: number;
-  total_year_2_fee?: number;
-  total_year_3_fee?: number;
+  total_year_1_fee?: string | number;
+  total_year_2_fee?: string | number;
+  total_year_3_fee?: string | number;
 
   created_at: string;
   updated_at: string;
@@ -128,6 +128,30 @@ export interface ContractListResponse {
 export interface ContractStatsResponse {
   success: boolean;
   data: ContractStats;
+}
+
+export interface ContractTemplate {
+  id: number;
+  template_id: string;
+  name: string;
+  description: string;
+  template_type: string;
+  template_data: any;
+  status: string;
+  is_active: boolean;
+  is_default: boolean;
+  version: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeneratedContract {
+  contract_id: number;
+  contract_number: string;
+  title: string;
+  status: string;
+  client_organization: string;
+  contract_value: number;
 }
 
 export const contractService = {
@@ -240,6 +264,129 @@ export const contractService = {
       `/contracts/${id}/send_email/`,
       emailData
     );
+  },
+
+  // Contract Template Methods
+
+  /**
+   * Get all contract templates
+   */
+  async getContractTemplates(params?: {
+    template_type?: string;
+    is_active?: boolean;
+  }): Promise<{ success: boolean; data: ContractTemplate[] }> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.template_type) queryParams.append('template_type', params.template_type);
+    if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
+
+    const endpoint = `/contract-templates/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return apiClient.get<{ success: boolean; data: ContractTemplate[] }>(endpoint);
+  },
+
+  /**
+   * Get a specific contract template
+   */
+  async getContractTemplate(templateId: string): Promise<{ success: boolean; data: ContractTemplate }> {
+    return apiClient.get<{ success: boolean; data: ContractTemplate }>(`/contract-templates/${templateId}/`);
+  },
+
+  /**
+   * Create a new contract template from template builder data
+   */
+  async createContractTemplate(templateData: any): Promise<{ 
+    success: boolean; 
+    message: string; 
+    data: Partial<ContractTemplate> 
+  }> {
+    return apiClient.post<{ 
+      success: boolean; 
+      message: string; 
+      data: Partial<ContractTemplate> 
+    }>('/contract-templates/', {
+      template_data: templateData
+    });
+  },
+
+  /**
+   * Update an existing contract template
+   */
+  async updateContractTemplate(templateId: string, templateData: any): Promise<{ 
+    success: boolean; 
+    message: string; 
+    data: Partial<ContractTemplate> 
+  }> {
+    return apiClient.put<{ 
+      success: boolean; 
+      message: string; 
+      data: Partial<ContractTemplate> 
+    }>(`/contract-templates/${templateId}/`, {
+      template_data: templateData
+    });
+  },
+
+  /**
+   * Generate a contract from a template
+   */
+  async generateContractFromTemplate(
+    templateId: string, 
+    data: {
+      opportunity_id?: number;
+      contract_data?: any;
+    }
+  ): Promise<{ 
+    success: boolean; 
+    message: string; 
+    data: GeneratedContract 
+  }> {
+    return apiClient.post<{ 
+      success: boolean; 
+      message: string; 
+      data: GeneratedContract 
+    }>(`/contract-templates/${templateId}/generate_contract/`, data);
+  },
+
+  /**
+   * Get the default template for a specific type
+   */
+  async getDefaultContractTemplate(templateType: string): Promise<{ 
+    success: boolean; 
+    data: ContractTemplate 
+  }> {
+    return apiClient.get<{ 
+      success: boolean; 
+      data: ContractTemplate 
+    }>(`/contract-templates/default_template/?template_type=${templateType}`);
+  },
+
+  /**
+   * Export template as JSON
+   */
+  async exportContractTemplate(templateId: string): Promise<{ 
+    success: boolean; 
+    data: any 
+  }> {
+    return apiClient.get<{ 
+      success: boolean; 
+      data: any 
+    }>(`/contract-templates/${templateId}/export/`);
+  },
+
+  /**
+   * Import template from JSON
+   */
+  async importContractTemplate(templateJson: any): Promise<{ 
+    success: boolean; 
+    message: string; 
+    data: Partial<ContractTemplate> 
+  }> {
+    return apiClient.post<{ 
+      success: boolean; 
+      message: string; 
+      data: Partial<ContractTemplate> 
+    }>('/contract-templates/import_template/', {
+      template_json: templateJson
+    });
   },
 };
 

@@ -222,6 +222,24 @@ export const NAV_DATA = [
         ],
       },
       {
+        title: "Certifications",
+        icon: Icons.AuditIcon,
+        items: [
+          {
+            title: "All Certifications",
+            url: "/certifications",
+          },
+          {
+            title: "Standards",
+            url: "/certifications/standards",
+          },
+          {
+            title: "Add Certification",
+            url: "/certifications/new",
+          },
+        ],
+      },
+      {
         title: "Clients",
         icon: Icons.ClientsIcon,
         items: [
@@ -255,6 +273,10 @@ export const NAV_DATA = [
             title: "Add Employee",
             url: "/employees/new",
           },
+          {
+            title: "User Management",
+            url: "/employees/user-management",
+          },
         ],
       },
       {
@@ -268,24 +290,6 @@ export const NAV_DATA = [
           {
             title: "Create Payroll",
             url: "/payroll/new",
-          },
-        ],
-      },
-      {
-        title: "Certifications",
-        icon: Icons.AuditIcon,
-        items: [
-          {
-            title: "All Certifications",
-            url: "/certifications",
-          },
-          {
-            title: "Standards",
-            url: "/certifications/standards",
-          },
-          {
-            title: "Add Certification",
-            url: "/certifications/new",
           },
         ],
       },

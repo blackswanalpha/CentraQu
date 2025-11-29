@@ -28,7 +28,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
           rel="stylesheet"
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

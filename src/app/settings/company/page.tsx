@@ -169,16 +169,73 @@ export default function CompanySettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 max-w-5xl">
-        {/* Header */}
-        <div>
-          <h1 className="text-heading-1 font-bold text-dark dark:text-white">
-            Settings &gt; Company Profile
-          </h1>
-          <p className="mt-2 text-body-base text-gray-600 dark:text-gray-400">
-            Manage your company information and settings
-          </p>
-        </div>
+      <div className="min-h-screen bg-background-light dark:bg-background-dark">
+        <main className="flex flex-1 flex-col items-center justify-start p-4 sm:p-6 md:p-10">
+          <div className="flex flex-col items-center w-full max-w-4xl mx-auto">
+            
+            {/* Header with Logo */}
+            <div className="flex items-center gap-2.5 mb-8">
+              <div className="size-10 text-primary">
+                <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                  <g clipPath="url(#clip0_6_535)">
+                    <path clipRule="evenodd" d="M47.2426 24L24 47.2426L0.757355 24L24 0.757355L47.2426 24ZM12.2426 21H35.7574L24 9.24264L12.2426 21Z" fill="currentColor" fillRule="evenodd"/>
+                  </g>
+                  <defs>
+                    <clipPath id="clip0_6_535">
+                      <rect fill="white" height="48" width="48"/>
+                    </clipPath>
+                  </defs>
+                </svg>
+              </div>
+              <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-[-0.015em]">AssureHub</h2>
+            </div>
+            
+            {/* Organization Profile Card */}
+            <div className="w-full flex flex-col items-center p-6 sm:p-8 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm mb-8">
+              <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-24 bg-slate-100 dark:bg-slate-800 p-2 mb-4 flex items-center justify-center">
+                <div className="h-16 w-16 text-primary flex items-center justify-center">
+                  <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
+                    <g clipPath="url(#clip0_6_535)">
+                      <path clipRule="evenodd" d="M47.2426 24L24 47.2426L0.757355 24L24 0.757355L47.2426 24ZM12.2426 21H35.7574L24 9.24264L12.2426 21Z" fill="currentColor" fillRule="evenodd"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+              
+              <div className="flex flex-col mb-6 text-center">
+                <p className="text-slate-900 dark:text-white text-[28px] font-bold leading-tight tracking-[-0.015em]">
+                  {form.values.companyName || "Your Organization"}
+                </p>
+                <p className="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal">
+                  {form.values.industry} • {form.values.companySize} employees
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mb-6">
+                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  <span className="truncate">View Public Profile</span>
+                </button>
+                <button 
+                  type="submit" 
+                  form="company-form"
+                  className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary-hover transition-colors"
+                  disabled={isSaving}
+                >
+                  <span className="truncate">{isSaving ? "Saving..." : "Save Changes"}</span>
+                </button>
+              </div>
+            </div>
+      
+        <div className="w-full space-y-8">
+          {/* Header */}
+          <div>
+            <h1 className="text-heading-1 font-bold text-dark dark:text-white">
+              Organization Details
+            </h1>
+            <p className="mt-2 text-body-base text-gray-600 dark:text-gray-400">
+              Manage your organization information and settings
+            </p>
+          </div>
 
         {/* Success/Error Messages */}
         {successMessage && (
@@ -193,7 +250,7 @@ export default function CompanySettingsPage() {
           </div>
         )}
 
-        <form onSubmit={form.handleSubmit} className="space-y-6">
+        <form id="company-form" onSubmit={form.handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <WidgetCard title="Basic Information">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -429,8 +486,8 @@ export default function CompanySettingsPage() {
             </div>
           </WidgetCard>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
+          {/* Action Buttons - Moved to top card, keeping this for mobile fallback */}
+          <div className="flex justify-end gap-4 sm:hidden">
             <Button
               type="button"
               variant="outline"
@@ -447,6 +504,9 @@ export default function CompanySettingsPage() {
             </Button>
           </div>
         </form>
+        </div>
+        </div>
+        </main>
       </div>
     </DashboardLayout>
   );

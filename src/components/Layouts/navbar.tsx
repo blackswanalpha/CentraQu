@@ -24,14 +24,6 @@ export function Navbar() {
 
       {/* Center: Page Title (Desktop Only) */}
       <div className="max-lg:hidden">
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Dashboard
-        </h1>
-      </div>
-
-      {/* Right: Search, Theme, Notifications, User */}
-      <div className="flex flex-1 items-center justify-end gap-2 min-[375px]:gap-4">
-        {/* Sidebar Toggle Button (Desktop Only) */}
         <button
           onClick={toggleSidebar}
           className="hidden lg:flex rounded-lg border border-gray-200 px-2 py-1.5 dark:border-gray-700 dark:bg-gray-800 hover:dark:bg-gray-700 hover:bg-gray-50"
@@ -39,6 +31,12 @@ export function Navbar() {
         >
           <SidebarToggleIcon className="w-4 h-4" />
         </button>
+      </div>
+
+      {/* Right: Search, Theme, Notifications, User */}
+      <div className="flex flex-1 items-center justify-end gap-2 min-[375px]:gap-4">
+        {/* Sidebar Toggle Button (Desktop Only) */}
+       
         
         {/* Search Bar */}
         <div className="relative w-full max-w-xs">

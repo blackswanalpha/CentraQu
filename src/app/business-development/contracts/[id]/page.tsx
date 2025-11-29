@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { DashboardLayout } from "@/components/Layouts/dashboard-layout";
 import { StatusBadge } from "@/components/BusinessDevelopment/status-badge";
@@ -50,21 +50,13 @@ export default function ContractDetailPage({
     return 'active';
   };
 
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "certification", label: "Certification Details" },
-    { id: "financial", label: "Financial" },
-    { id: "parties", label: "Parties" },
-    { id: "legal", label: "Legal & Compliance" },
-  ];
-
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center py-12">
+        <div className="mx-auto max-w-7xl p-6 lg:p-8 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading contract details...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading contract...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -74,581 +66,228 @@ export default function ContractDetailPage({
   if (error || !contract) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-red-600 dark:text-red-400">{error || 'Contract not found'}</p>
-          <button
-            onClick={() => window.location.href = '/business-development/contracts'}
-            className="mt-4 rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
-          >
-            Back to Contracts
-          </button>
+        <div className="mx-auto max-w-7xl p-6 lg:p-8 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <span className="material-symbols-outlined text-6xl text-red-500">error</span>
+            <p className="mt-4 text-gray-900 dark:text-white font-semibold">{error || 'Contract not found'}</p>
+            <button
+              onClick={() => window.location.href = '/business-development/contracts'}
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            >
+              Back to Contracts
+            </button>
+          </div>
         </div>
       </DashboardLayout>
     );
   }
 
+  // Calculate days remaining and progress percentage for Contract Timeline
+  const startDate = new Date(contract.start_date);
+  const endDate = new Date(contract.end_date);
+  const today = new Date();
+
+  const totalDuration = endDate.getTime() - startDate.getTime();
+  const elapsedDuration = today.getTime() - startDate.getTime();
+
+  const daysRemaining = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const progressPercentage = Math.min(100, Math.max(0, (elapsedDuration / totalDuration) * 100));
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {contract.client_organization || contract.client_name}
-            </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              {contract.title}
-            </p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              {contract.contract_number}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                try {
-                  const blob = await contractService.downloadContractPdf(contract.id);
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `contract_${contract.id}_${contract.contract_number}.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                } catch (error) {
-                  console.error('Error downloading PDF:', error);
-                  alert('Failed to download contract PDF. Please try again.');
-                }
-              }}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-            >
-              Download PDF
-            </button>
-            <button
-              onClick={() => window.location.href = `/business-development/contracts/${id}/edit`}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-            >
-              Edit
-            </button>
-          </div>
+      <div className="mx-auto max-w-7xl p-6 lg:p-8">
+        {/* Breadcrumbs */}
+        <div className="flex flex-wrap items-center gap-2">
+          <a className="text-gray-500 dark:text-gray-400 text-sm font-medium leading-normal hover:text-primary" href="#">Home</a>
+          <span className="text-gray-500 dark:text-gray-400 text-sm font-medium leading-normal">/</span>
+          <a className="text-gray-500 dark:text-gray-400 text-sm font-medium leading-normal hover:text-primary" href="/business-development/contracts">Contracts</a>
+          <span className="text-gray-500 dark:text-gray-400 text-sm font-medium leading-normal">/</span>
+          <span className="text-gray-900 dark:text-white text-sm font-medium leading-normal">Contract #{contract.contract_number}</span>
         </div>
 
-        {/* Key Info Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
-            <StatusBadge status={mapStatusToFrontend(contract)} />
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-              {contract.currency} {(Number(contract.contract_value) / 1000).toFixed(0)}K
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-              {contract.duration_months || contract.certification_cycle_years ?
-                `${contract.certification_cycle_years || Math.floor((contract.duration_months || 0) / 12)} years` :
-                'N/A'}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-sm text-gray-600 dark:text-gray-400">ISO Standards</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
-              {contract.total_standards_count || contract.iso_standards?.length || 0}
-            </p>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-gray-800">
-          <div className="flex space-x-8">
-            {tabs.map((tab) => (
+        <div className="space-y-6">
+          {/* PageHeading */}
+          <div className="flex flex-wrap items-center justify-between gap-4 py-6">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-gray-900 dark:text-white text-3xl font-bold leading-tight">Contract #{contract.contract_number} - {contract.title}</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">Active with {contract.client_organization || contract.client_name}</p>
+            </div>
+            <div className="flex items-center gap-2">
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`border-b-2 px-1 py-4 text-sm font-medium ${activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                  }`}
+                onClick={() => window.location.href = `/business-development/contracts/${id}/edit`}
+                className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200/80 dark:bg-gray-700/80 text-gray-900 dark:text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-300 dark:hover:bg-gray-600"
               >
-                {tab.label}
+                <span className="truncate">Edit</span>
               </button>
-            ))}
+              <button
+                onClick={async () => {
+                  try {
+                    const blob = await contractService.downloadContractPdf(contract.id);
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `contract_${contract.id}_${contract.contract_number}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  } catch (error) {
+                    console.error('Error downloading PDF:', error);
+                    alert('Failed to download contract PDF. Please try again.');
+                  }
+                }}
+                className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/80 dark:hover:bg-gray-700/80">
+                <span className="material-symbols-outlined">download</span>
+              </button>
+              <button className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200/80 dark:hover:bg-gray-700/80">
+                <span className="material-symbols-outlined">share</span>
+              </button>
+              <button className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4 hover:bg-primary/90">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>signature</span>
+                <span className="truncate">Request E-Sign</span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Tab Content */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-          {activeTab === "overview" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Contract Information
-                </h3>
-                <div className="mt-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Contract Number</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                      {contract.contract_number}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Contract Type</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                      {contract.contract_type}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Start Date</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                      {new Date(contract.start_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">End Date</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                      {new Date(contract.end_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {contract.agreement_date && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Agreement Date</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {new Date(contract.agreement_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                  {contract.opportunity_title && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Linked Opportunity</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.opportunity_title}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Description
-                </h3>
-                <p className="mt-2 text-gray-600 dark:text-gray-400">
-                  {contract.description || 'No description available'}
-                </p>
-              </div>
+          {/* Chips */}
+          <div className="flex gap-3 pb-6 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-green-100 dark:bg-green-900/40 px-3">
+              <div className="size-2 rounded-full bg-green-500"></div>
+              <p className="text-green-800 dark:text-green-300 text-sm font-medium leading-normal">Active</p>
             </div>
-          )}
-
-          {activeTab === "certification" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  ISO Standards
-                </h3>
-                {contract.iso_standards && contract.iso_standards.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {contract.iso_standards.map((standard, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-4 py-2 text-sm font-medium text-blue-800 dark:text-blue-200"
-                      >
-                        {standard}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-400">No ISO standards specified</p>
-                )}
+            {(contract.client_signed_date || contract.signed_by_client_name) && (
+              <div className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-blue-100 dark:bg-blue-900/40 px-3">
+                <span className="material-symbols-outlined text-blue-800 dark:text-blue-300 text-base">check_circle</span>
+                <p className="text-blue-800 dark:text-blue-300 text-sm font-medium leading-normal">E-Signed</p>
               </div>
-
-              {contract.scope_of_work && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Scope of Work
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                    {contract.scope_of_work}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Audit Process
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {contract.stage_1_audit_days && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Stage I Audit Days</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.stage_1_audit_days} days
-                      </p>
-                    </div>
-                  )}
-                  {contract.stage_2_audit_days && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Stage II Audit Days</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.stage_2_audit_days} days
-                      </p>
-                    </div>
-                  )}
-                  {contract.surveillance_audit_frequency && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Surveillance Frequency</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.surveillance_audit_frequency}
-                      </p>
-                    </div>
-                  )}
-                  {contract.certification_cycle_years && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Certification Cycle</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.certification_cycle_years} years
-                      </p>
-                    </div>
-                  )}
-                </div>
+            )}
+            {contract.auto_renewal && (
+              <div className="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3">
+                <span className="material-symbols-outlined text-amber-800 dark:text-amber-300 text-base">autorenew</span>
+                <p className="text-amber-800 dark:text-amber-300 text-sm font-medium leading-normal">Auto-Renews</p>
               </div>
-
-              {contract.site_covered && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Site Covered
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {contract.site_covered}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "financial" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Fee Structure (Per Standard)
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Year 1 (Certification)</p>
-                    <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                      {contract.currency} {contract.fee_per_standard_year_1?.toLocaleString() || 'N/A'}
-                    </p>
-                    {contract.total_year_1_fee && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                        Total: {contract.currency} {contract.total_year_1_fee.toLocaleString()}
-                      </p>
-                    )}
+            )}
+          </div>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+            {/* Left Column: Metadata */}
+            <div className="lg:col-span-1 flex flex-col gap-6">
+              <div className="p-6 rounded-xl bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Contract Details</h3>
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Client</span>
+                    <a className="font-medium text-primary hover:underline" href="#">{contract.client_organization || contract.client_name}</a>
                   </div>
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Year 2 (Surveillance)</p>
-                    <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                      {contract.currency} {contract.fee_per_standard_year_2?.toLocaleString() || 'N/A'}
-                    </p>
-                    {contract.total_year_2_fee && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                        Total: {contract.currency} {contract.total_year_2_fee.toLocaleString()}
-                      </p>
-                    )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Contract Value</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{contract.currency} {Number(contract.contract_value).toLocaleString()}</span>
                   </div>
-                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Year 3 (Surveillance)</p>
-                    <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                      {contract.currency} {contract.fee_per_standard_year_3?.toLocaleString() || 'N/A'}
-                    </p>
-                    {contract.total_year_3_fee && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                        Total: {contract.currency} {contract.total_year_3_fee.toLocaleString()}
-                      </p>
-                    )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Billing Model</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{contract.contract_type || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Start Date</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{new Date(contract.start_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">End Date</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{new Date(contract.end_date).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Total Contract Value
-                </h3>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {contract.currency} {Number(contract.contract_value).toLocaleString()}
-                </p>
-              </div>
-
-              {contract.payment_schedule && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Payment Schedule
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                    {contract.payment_schedule}
-                  </p>
+              <div className="p-6 rounded-xl bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Contract Timeline</h3>
+                <div className="relative w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+                  <div className="absolute h-2 bg-primary rounded-full" style={{ width: `${progressPercentage}%` }}></div>
                 </div>
-              )}
-
-              {contract.recertification_fee_tbd !== undefined && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Recertification Fee
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {contract.recertification_fee_tbd ?
-                      'To be determined' :
-                      `${contract.currency} ${contract.recertification_fee?.toLocaleString() || 'N/A'}`
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "parties" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Client Information
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {contract.client_organization && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Organization</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.client_organization}
-                      </p>
-                    </div>
-                  )}
-                  {contract.client_contact_person && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Contact Person</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.client_contact_person}
-                      </p>
-                    </div>
-                  )}
-                  {contract.client_email && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.client_email}
-                      </p>
-                    </div>
-                  )}
-                  {contract.client_telephone && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Telephone</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.client_telephone}
-                      </p>
-                    </div>
-                  )}
-                  {contract.client_address && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Address</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.client_address}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Client Signature */}
-                {(contract.signed_by_client_name || contract.client_signed_date) && (
-                  <div className="mt-6 rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Signature</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {contract.signed_by_client_name && (
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Signed By</p>
-                          <p className="mt-1 text-gray-900 dark:text-white">
-                            {contract.signed_by_client_name}
-                          </p>
-                        </div>
-                      )}
-                      {contract.signed_by_client_position && (
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
-                          <p className="mt-1 text-gray-900 dark:text-white">
-                            {contract.signed_by_client_position}
-                          </p>
-                        </div>
-                      )}
-                      {contract.client_signed_date && (
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
-                          <p className="mt-1 text-gray-900 dark:text-white">
-                            {new Date(contract.client_signed_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Certification Body
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {contract.cb_name && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Name</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.cb_name}
-                      </p>
-                    </div>
-                  )}
-                  {contract.cb_address && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Address</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.cb_address}
-                      </p>
-                    </div>
-                  )}
-                  {contract.cb_role && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Role</p>
-                      <p className="mt-1 text-gray-900 dark:text-white">
-                        {contract.cb_role}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Company Signature */}
-                {(contract.signed_by_company_name || contract.company_signed_date) && (
-                  <div className="mt-6 rounded-lg bg-gray-50 dark:bg-gray-800/50 p-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Signature</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {contract.signed_by_company_name && (
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Signed By</p>
-                          <p className="mt-1 text-gray-900 dark:text-white">
-                            {contract.signed_by_company_name}
-                          </p>
-                        </div>
-                      )}
-                      {contract.signed_by_company_position && (
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
-                          <p className="mt-1 text-gray-900 dark:text-white">
-                            {contract.signed_by_company_position}
-                          </p>
-                        </div>
-                      )}
-                      {contract.company_signed_date && (
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
-                          <p className="mt-1 text-gray-900 dark:text-white">
-                            {new Date(contract.company_signed_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "legal" && (
-            <div className="space-y-6">
-              {contract.confidentiality_clause && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Confidentiality Clause
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                    {contract.confidentiality_clause}
-                  </p>
-                </div>
-              )}
-
-              {contract.data_protection_compliance && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Data Protection Compliance
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                    {contract.data_protection_compliance}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Cancellation & Termination Policy
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {contract.cancellation_notice_days && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Cancellation Notice</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.cancellation_notice_days} working days
-                      </p>
-                    </div>
-                  )}
-                  {contract.termination_notice_days && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Termination Notice</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.termination_notice_days} days
-                      </p>
-                    </div>
-                  )}
-                  {contract.cancellation_fee_applies !== undefined && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Late Cancellation Fee</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.cancellation_fee_applies ? 'Full audit fee applies' : 'No fee'}
-                      </p>
-                    </div>
-                  )}
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  <span>{new Date(contract.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  <span>{daysRemaining} days remaining</span>
+                  <span>{new Date(contract.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                 </div>
               </div>
-
-              {contract.client_responsibilities && contract.client_responsibilities.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    Client Responsibilities
-                  </h3>
-                  <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                    {contract.client_responsibilities.map((responsibility, index) => (
-                      <li key={index}>{responsibility}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Renewal Settings
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Auto Renewal</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                      {contract.auto_renewal ? 'Enabled' : 'Disabled'}
-                    </p>
-                  </div>
+              <div className="p-6 rounded-xl bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Reminders</h3>
+                <ul className="space-y-3">
                   {contract.renewal_notice_days && (
-                    <div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Renewal Notice</p>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                        {contract.renewal_notice_days} days before expiry
-                      </p>
-                    </div>
+                    <li className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40">
+                        <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">notifications</span>
+                      </div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Renewal reminder set for {contract.renewal_notice_days} days before end.</span>
+                    </li>
                   )}
+                  {/* Placeholder for next invoice, could be implemented with actual invoice data */}
+                  <li className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40">
+                      <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-lg">calendar_month</span>
+                    </div>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Next invoice on Aug 1, 2024. (Placeholder)</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            {/* Right Column: Document and Related Info */}
+            <div className="lg:col-span-2 flex flex-col gap-8">
+              <div className="rounded-xl bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 h-[600px] flex flex-col">
+                <div className="border-b border-gray-200 dark:border-gray-800 px-4">
+                  <div className="flex items-center">
+                    <button className="px-4 py-3 border-b-2 border-primary text-primary font-semibold text-sm">Contract.pdf</button>
+                    <button className="px-4 py-3 border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 font-medium text-sm">Addendum_A.pdf</button>
+                  </div>
+                </div>
+                <div className="flex-1 p-2 bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center rounded-b-xl">
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <span className="material-symbols-outlined text-5xl">picture_as_pdf</span>
+                    <p className="mt-2 text-sm font-medium">Document viewer placeholder</p>
+                  </div>
+                </div>
+              </div> {/* This is the missing closing div for the document viewer card */}
+              <div className="rounded-xl bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white p-6 border-b border-gray-200 dark:border-gray-800">Related Invoices</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800/50">
+                      <tr>
+                        <th className="px-6 py-3" scope="col">Invoice #</th>
+                        <th className="px-6 py-3" scope="col">Amount</th>
+                        <th className="px-6 py-3" scope="col">Status</th>
+                        <th className="px-6 py-3" scope="col">Due Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-6 py-4 font-medium text-primary hover:underline"><a href="#">INV-2024-001</a></td>
+                        <td className="px-6 py-4">$15,000.00</td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">Paid</span>
+                        </td>
+                        <td className="px-6 py-4">Jul 1, 2024</td>
+                      </tr>
+                      <tr className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-6 py-4 font-medium text-primary hover:underline"><a href="#">INV-2024-002</a></td>
+                        <td className="px-6 py-4">$15,000.00</td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">Due Soon</span>
+                        </td>
+                        <td className="px-6 py-4">Aug 1, 2024</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-6 py-4 font-medium text-primary hover:underline"><a href="#">INV-2024-003</a></td>
+                        <td className="px-6 py-4">$15,000.00</td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">Upcoming</span>
+                        </td>
+                        <td className="px-6 py-4">Sep 1, 2024</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </DashboardLayout>

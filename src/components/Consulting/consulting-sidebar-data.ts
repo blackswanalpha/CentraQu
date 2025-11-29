@@ -162,6 +162,10 @@ export const CONSULTING_NAV_DATA = [
             title: "Skills Matrix",
             url: "/consulting/resources/skills",
           },
+          {
+            title: "User Management",
+            url: "/consulting/resources/user-management",
+          },
         ],
       },
     ],

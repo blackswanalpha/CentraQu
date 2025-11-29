@@ -2,8 +2,9 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { FileText, Sparkles, ScanLine, Search, ArrowLeft, MessageCircle } from "lucide-react";
+import { FileText, Sparkles, ScanLine, Search, ArrowLeft, MessageCircle, FileSignature } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -36,7 +37,7 @@ const cardVariants = {
     },
 };
 
-const IllustrationPlaceholder = ({ icon: Icon, color }: { icon: any, color: "blue" | "purple" | "indigo" | "sky" }) => {
+const IllustrationPlaceholder = ({ icon: Icon, color }: { icon: any, color: "blue" | "purple" | "indigo" | "sky" | "green" }) => {
     const colorStyles = {
         blue: {
             bg: "from-blue-50",
@@ -53,6 +54,10 @@ const IllustrationPlaceholder = ({ icon: Icon, color }: { icon: any, color: "blu
         sky: {
             bg: "from-sky-50",
             text: "text-sky-400",
+        },
+        green: {
+            bg: "from-green-50",
+            text: "text-green-400",
         },
     };
 
@@ -72,6 +77,8 @@ const IllustrationPlaceholder = ({ icon: Icon, color }: { icon: any, color: "blu
 };
 
 export default function TemplateStarterPage() {
+    const router = useRouter();
+
     return (
         <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display relative overflow-hidden">
             {/* Back Button */}
@@ -96,9 +103,10 @@ export default function TemplateStarterPage() {
                         Select how you'd like to create your template
                     </motion.h1>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 w-full">
                         {/* Card 1: Start from scratch */}
                         <motion.div
+                            onClick={() => router.push('/template/builder')}
                             className="bg-white dark:bg-dark-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer h-full flex flex-col"
                             variants={cardVariants}
                             whileHover="hover"
@@ -153,6 +161,22 @@ export default function TemplateStarterPage() {
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Find a template</h3>
                                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                                     Browse ready made templates from the SafetyCulture Library.
+                                </p>
+                            </div>
+                        </motion.div>
+
+                        {/* Card 5: Contract Template */}
+                        <motion.div
+                            onClick={() => router.push('/template/contract')}
+                            className="bg-white dark:bg-dark-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer h-full flex flex-col"
+                            variants={cardVariants}
+                            whileHover="hover"
+                        >
+                            <IllustrationPlaceholder icon={FileSignature} color="green" />
+                            <div className="p-6 flex flex-col flex-grow">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Certification Contract</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    Create a professional 10-page certification contract with AI-generated visuals.
                                 </p>
                             </div>
                         </motion.div>
