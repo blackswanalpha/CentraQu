@@ -270,6 +270,16 @@ export const templateService = {
         }
     },
 
+    async listTemplates(): Promise<Template[]> {
+        try {
+            const response = await axiosInstance.get<Template[]>('');
+            return response.data;
+        } catch (error) {
+            console.error('Error listing templates:', error);
+            throw error;
+        }
+    },
+
     async updateTemplate(id: string, data: Partial<Template>): Promise<Template> {
         try {
             const response = await axiosInstance.put<Template>(`${id}/`, data);

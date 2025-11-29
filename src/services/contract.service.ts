@@ -18,6 +18,7 @@ export interface Contract {
   title: string;
   description: string;
   agreement_date?: string;
+  contract_template_id?: number;
 
   // Client Contact Info
   client_organization?: string;
@@ -294,15 +295,15 @@ export const contractService = {
   /**
    * Create a new contract template from template builder data
    */
-  async createContractTemplate(templateData: any): Promise<{ 
-    success: boolean; 
-    message: string; 
-    data: Partial<ContractTemplate> 
+  async createContractTemplate(templateData: any): Promise<{
+    success: boolean;
+    message: string;
+    data: Partial<ContractTemplate>
   }> {
-    return apiClient.post<{ 
-      success: boolean; 
-      message: string; 
-      data: Partial<ContractTemplate> 
+    return apiClient.post<{
+      success: boolean;
+      message: string;
+      data: Partial<ContractTemplate>
     }>('/contract-templates/', {
       template_data: templateData
     });
@@ -311,15 +312,15 @@ export const contractService = {
   /**
    * Update an existing contract template
    */
-  async updateContractTemplate(templateId: string, templateData: any): Promise<{ 
-    success: boolean; 
-    message: string; 
-    data: Partial<ContractTemplate> 
+  async updateContractTemplate(templateId: string, templateData: any): Promise<{
+    success: boolean;
+    message: string;
+    data: Partial<ContractTemplate>
   }> {
-    return apiClient.put<{ 
-      success: boolean; 
-      message: string; 
-      data: Partial<ContractTemplate> 
+    return apiClient.put<{
+      success: boolean;
+      message: string;
+      data: Partial<ContractTemplate>
     }>(`/contract-templates/${templateId}/`, {
       template_data: templateData
     });
@@ -329,61 +330,61 @@ export const contractService = {
    * Generate a contract from a template
    */
   async generateContractFromTemplate(
-    templateId: string, 
+    templateId: string,
     data: {
       opportunity_id?: number;
       contract_data?: any;
     }
-  ): Promise<{ 
-    success: boolean; 
-    message: string; 
-    data: GeneratedContract 
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: GeneratedContract
   }> {
-    return apiClient.post<{ 
-      success: boolean; 
-      message: string; 
-      data: GeneratedContract 
+    return apiClient.post<{
+      success: boolean;
+      message: string;
+      data: GeneratedContract
     }>(`/contract-templates/${templateId}/generate_contract/`, data);
   },
 
   /**
    * Get the default template for a specific type
    */
-  async getDefaultContractTemplate(templateType: string): Promise<{ 
-    success: boolean; 
-    data: ContractTemplate 
+  async getDefaultContractTemplate(templateType: string): Promise<{
+    success: boolean;
+    data: ContractTemplate
   }> {
-    return apiClient.get<{ 
-      success: boolean; 
-      data: ContractTemplate 
+    return apiClient.get<{
+      success: boolean;
+      data: ContractTemplate
     }>(`/contract-templates/default_template/?template_type=${templateType}`);
   },
 
   /**
    * Export template as JSON
    */
-  async exportContractTemplate(templateId: string): Promise<{ 
-    success: boolean; 
-    data: any 
+  async exportContractTemplate(templateId: string): Promise<{
+    success: boolean;
+    data: any
   }> {
-    return apiClient.get<{ 
-      success: boolean; 
-      data: any 
+    return apiClient.get<{
+      success: boolean;
+      data: any
     }>(`/contract-templates/${templateId}/export/`);
   },
 
   /**
    * Import template from JSON
    */
-  async importContractTemplate(templateJson: any): Promise<{ 
-    success: boolean; 
-    message: string; 
-    data: Partial<ContractTemplate> 
+  async importContractTemplate(templateJson: any): Promise<{
+    success: boolean;
+    message: string;
+    data: Partial<ContractTemplate>
   }> {
-    return apiClient.post<{ 
-      success: boolean; 
-      message: string; 
-      data: Partial<ContractTemplate> 
+    return apiClient.post<{
+      success: boolean;
+      message: string;
+      data: Partial<ContractTemplate>
     }>('/contract-templates/import_template/', {
       template_json: templateJson
     });

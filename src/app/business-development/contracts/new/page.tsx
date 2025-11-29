@@ -56,6 +56,7 @@ interface ContractFormData {
   certificateValidityExtensionAllowed: boolean;
 
   // Fees
+  standardFees: Record<string, { year1: string; year2: string; year3: string }>;
   feePerStandardYear1: string;
   feePerStandardYear2: string;
   feePerStandardYear3: string;
@@ -95,6 +96,7 @@ export default function NewContractPage() {
   const [isoStandards, setIsoStandards] = useState<ISOStandard[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedStandardId, setSelectedStandardId] = useState("");
+  const [selectedStandardForFees, setSelectedStandardForFees] = useState("");
   const [newResponsibility, setNewResponsibility] = useState("");
 
   const [formData, setFormData] = useState<ContractFormData>({
@@ -140,6 +142,7 @@ export default function NewContractPage() {
     feePerStandardYear1: "1000",
     feePerStandardYear2: "1000",
     feePerStandardYear3: "1000",
+    standardFees: {},
     recertificationFeeTbd: true,
     recertificationFee: "",
     additionalFeesDescription: "Follow-up audits (closing NCs), Scope extensions, Major operational changes",
@@ -225,11 +228,13 @@ export default function NewContractPage() {
         opportunityId: value,
         clientOrganization: selectedOpportunity.client_name || selectedOpportunity.client?.name || "",
         clientContactPerson: selectedOpportunity.client_name || selectedOpportunity.client?.name || "",
-        clientEmail: selectedOpportunity.client?.email || "",
-        clientAddress: selectedOpportunity.client?.address || "",
+        clientEmail: "", // Client details not available in opportunity object
+        clientAddress: "", // Client details not available in opportunity object
         description: selectedOpportunity.description || "",
         contractValue: selectedOpportunity.estimated_value?.toString() || "",
-        title: prev.title || suggestedTitle
+        title: prev.title || suggestedTitle,
+        currency: selectedOpportunity.currency || prev.currency,
+        serviceType: selectedOpportunity.service_type as ContractFormData['serviceType'] || prev.serviceType,
       }));
     }
   };
@@ -289,6 +294,76 @@ export default function NewContractPage() {
     }));
   };
 
+  // Initialize standard fees when standards change
+  useEffect(() => {
+    if (formData.isoStandards.length > 0) {
+      setFormData(prev => {
+        const newFees = { ...prev.standardFees };
+        let hasChanges = false;
+
+        // Add missing standards
+        formData.isoStandards.forEach(std => {
+          if (!newFees[std]) {
+            newFees[std] = {
+              year1: prev.feePerStandardYear1 || '1000',
+              year2: prev.feePerStandardYear2 || '1000',
+              year3: prev.feePerStandardYear3 || '1000'
+            };
+            hasChanges = true;
+          }
+        });
+
+        return hasChanges ? { ...prev, standardFees: newFees } : prev;
+      });
+
+      if (!selectedStandardForFees && formData.isoStandards.length > 0) {
+        setSelectedStandardForFees(formData.isoStandards[0]);
+      }
+    }
+  }, [formData.isoStandards, selectedStandardForFees]);
+
+  const handleStandardFeeChange = (standard: string, year: 'year1' | 'year2' | 'year3', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      standardFees: {
+        ...prev.standardFees,
+        [standard]: {
+          ...prev.standardFees[standard] || { year1: '0', year2: '0', year3: '0' },
+          [year]: value
+        }
+      }
+    }));
+  };
+
+  const calculateTotalContractValue = () => {
+    let total = 0;
+
+    // Sum up fees for all standards
+    formData.isoStandards.forEach(std => {
+      const fees = formData.standardFees[std];
+      const year1 = fees ? parseFloat(fees.year1 || '0') : parseFloat(formData.feePerStandardYear1 || '0');
+      const year2 = fees ? parseFloat(fees.year2 || '0') : parseFloat(formData.feePerStandardYear2 || '0');
+      const year3 = fees ? parseFloat(fees.year3 || '0') : parseFloat(formData.feePerStandardYear3 || '0');
+
+      total += (isNaN(year1) ? 0 : year1);
+      total += (isNaN(year2) ? 0 : year2);
+      total += (isNaN(year3) ? 0 : year3);
+    });
+
+    if (!formData.recertificationFeeTbd && formData.recertificationFee) {
+      const recert = parseFloat(formData.recertificationFee);
+      total += (isNaN(recert) ? 0 : recert);
+    }
+
+    return total.toFixed(2);
+  };
+
+  // Update contract value when fees change
+  useEffect(() => {
+    const total = calculateTotalContractValue();
+    setFormData(prev => ({ ...prev, contractValue: total }));
+  }, [formData.standardFees, formData.isoStandards, formData.recertificationFee, formData.recertificationFeeTbd]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -314,6 +389,7 @@ export default function NewContractPage() {
       // Prepare contract data for API
       const contractData = {
         opportunity_id: parseInt(formData.opportunityId),
+        contract_template_id: formData.selectedTemplateId ? parseInt(formData.selectedTemplateId) : undefined,
         title: formData.title,
         description: formData.description,
         contract_type: formData.serviceType,
@@ -359,8 +435,9 @@ export default function NewContractPage() {
         fee_per_standard_year_1: parseFloat(formData.feePerStandardYear1),
         fee_per_standard_year_2: parseFloat(formData.feePerStandardYear2),
         fee_per_standard_year_3: parseFloat(formData.feePerStandardYear3),
+        standard_fees: formData.standardFees,
         recertification_fee_tbd: formData.recertificationFeeTbd,
-        recertification_fee: formData.recertificationFee ? parseFloat(formData.recertificationFee) : null,
+        recertification_fee: formData.recertificationFee ? parseFloat(formData.recertificationFee) : undefined,
         additional_fees_description: formData.additionalFeesDescription,
 
         // Financial
@@ -574,14 +651,14 @@ export default function NewContractPage() {
                           className="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 dark:text-gray-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal"
                         >
                           <option value="">No template (manual configuration)</option>
-                          {templates.map((template) => (
-                            <option key={template.id} value={template.id}>
-                              {template.title}
+                          {templates.map((t: Template) => (
+                            <option key={t.id} value={t.id}>
+                              {t.title}
                             </option>
                           ))}
                         </select>
                       </label>
-                      {formData.selectedTemplateId && templates.find(t => t.id === formData.selectedTemplateId) && (
+                      {formData.selectedTemplateId && templates.find(t => t.id === parseInt(formData.selectedTemplateId)) && (
                         <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
                           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             {templates.find(t => t.id === formData.selectedTemplateId)?.title}
@@ -688,158 +765,10 @@ export default function NewContractPage() {
                       {/* ... (content of Audit Process) ... */}
                     </div>
 
-                    {/* Timeline & Certification Conditions */}
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Timeline & Certification Conditions
-                      </h2>
-                      {/* ... content of timeline ... */}
-                    </div>
+
 
                     {/* Policies & Legal */}
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Policies & Legal
-                      </h2>
 
-                      <div className="space-y-4">
-                        {/* Cancellation Policy */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Cancellation Notice (Working Days)
-                            </label>
-                            <input
-                              type="number"
-                              name="cancellationNoticeDays"
-                              value={formData.cancellationNoticeDays}
-                              onChange={handleInputChange}
-                              className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              name="cancellationFeeApplies"
-                              checked={formData.cancellationFeeApplies}
-                              onChange={handleInputChange}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <label className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                              Full audit fee applies for late cancellations
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* Confidentiality */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Confidentiality Clause
-                          </label>
-                          <textarea
-                            name="confidentialityClause"
-                            value={formData.confidentialityClause}
-                            onChange={handleInputChange}
-                            rows={2}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        {/* Data Protection */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Data Protection Compliance
-                          </label>
-                          <textarea
-                            name="dataProtectionCompliance"
-                            value={formData.dataProtectionCompliance}
-                            onChange={handleInputChange}
-                            rows={2}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        {/* Client Responsibilities */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Client Responsibilities
-                          </label>
-                          <div className="flex gap-2 mb-2">
-                            <input
-                              type="text"
-                              value={newResponsibility}
-                              onChange={(e) => setNewResponsibility(e.target.value)}
-                              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddResponsibility())}
-                              placeholder="Add a responsibility..."
-                              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                            <button
-                              type="button"
-                              onClick={handleAddResponsibility}
-                              className="rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary/90"
-                            >
-                              Add
-                            </button>
-                          </div>
-                          <ul className="space-y-1">
-                            {formData.clientResponsibilities.map((resp, index) => (
-                              <li key={index} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <span className="flex-1">• {resp}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveResponsibility(index)}
-                                  className="text-red-600 hover:text-red-800 dark:text-red-400"
-                                >
-                                  Remove
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        {/* Termination */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Termination Notice (Days)
-                            </label>
-                            <input
-                              type="number"
-                              name="terminationNoticeDays"
-                              value={formData.terminationNoticeDays}
-                              onChange={handleInputChange}
-                              className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              name="terminationFeeWaiver"
-                              checked={formData.terminationFeeWaiver}
-                              onChange={handleInputChange}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <label className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                              Termination waives fees for completed audits
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* Entire Agreement Clause */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Entire Agreement Clause
-                          </label>
-                          <textarea
-                            name="entireAgreementClause"
-                            value={formData.entireAgreementClause}
-                            onChange={handleInputChange}
-                            rows={2}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
 
                     {/* Renewal Settings */}
                     <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
@@ -883,149 +812,223 @@ export default function NewContractPage() {
                     </h2>
                     {/* Fee Structure */}
                     <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
                         Fee Structure (Per Standard)
                       </h2>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Year 1 (Certification)
-                          </label>
-                          <div className="flex">
-                            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
-                              {formData.currency}
-                            </span>
-                            <input
-                              type="number"
-                              name="feePerStandardYear1"
-                              value={formData.feePerStandardYear1}
-                              onChange={handleInputChange}
-                              step="0.01"
-                              className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                        </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Year 2 (Surveillance)
-                          </label>
-                          <div className="flex">
-                            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
-                              {formData.currency}
-                            </span>
-                            <input
-                              type="number"
-                              name="feePerStandardYear2"
-                              value={formData.feePerStandardYear2}
-                              onChange={handleInputChange}
-                              step="0.01"
-                              className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                        </div>
+                      {formData.isoStandards.length > 0 ? (
+                        <div className="space-y-6">
+                          {/* Fee Cards - One per Standard */}
+                          {formData.isoStandards.map((standard, index) => (
+                            <div
+                              key={standard}
+                              className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 p-6 shadow-sm hover:shadow-md transition-shadow"
+                            >
+                              {/* Standard Header */}
+                              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                                    <span className="text-lg font-bold text-primary">{index + 1}</span>
+                                  </div>
+                                  <div>
+                                    <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                                      {standard}
+                                    </h3>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      3-Year Certification Cycle
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">Total for Standard</p>
+                                  <p className="text-lg font-bold text-primary">
+                                    {formData.currency} {(
+                                      (parseFloat(formData.standardFees[standard]?.year1 || '0') +
+                                        parseFloat(formData.standardFees[standard]?.year2 || '0') +
+                                        parseFloat(formData.standardFees[standard]?.year3 || '0'))
+                                    ).toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Year 3 (Surveillance)
-                          </label>
-                          <div className="flex">
-                            <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
-                              {formData.currency}
-                            </span>
-                            <input
-                              type="number"
-                              name="feePerStandardYear3"
-                              value={formData.feePerStandardYear3}
-                              onChange={handleInputChange}
-                              step="0.01"
-                              className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                              {/* Year Fee Inputs */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Year 1 */}
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    Year 1 - Certification
+                                  </label>
+                                  <div className="flex">
+                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 text-gray-600 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
+                                      {formData.currency}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      value={formData.standardFees[standard]?.year1 || ''}
+                                      onChange={(e) => handleStandardFeeChange(standard, 'year1', e.target.value)}
+                                      className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2.5 text-sm font-medium dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="flex items-center mb-2">
-                            <input
-                              type="checkbox"
-                              name="recertificationFeeTbd"
-                              checked={formData.recertificationFeeTbd}
-                              onChange={handleInputChange}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <label className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Recertification Fee TBD
-                            </label>
-                          </div>
-                          {!formData.recertificationFeeTbd && (
-                            <div className="flex">
-                              <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
-                                {formData.currency}
-                              </span>
-                              <input
-                                type="number"
-                                name="recertificationFee"
-                                value={formData.recertificationFee}
-                                onChange={handleInputChange}
-                                step="0.01"
-                                placeholder="Recertification fee"
-                                className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                              />
+                                {/* Year 2 */}
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    Year 2 - Surveillance
+                                  </label>
+                                  <div className="flex">
+                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 text-gray-600 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
+                                      {formData.currency}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      value={formData.standardFees[standard]?.year2 || ''}
+                                      onChange={(e) => handleStandardFeeChange(standard, 'year2', e.target.value)}
+                                      className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2.5 text-sm font-medium dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Year 3 */}
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    Year 3 - Surveillance
+                                  </label>
+                                  <div className="flex">
+                                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-100 text-gray-600 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
+                                      {formData.currency}
+                                    </span>
+                                    <input
+                                      type="number"
+                                      value={formData.standardFees[standard]?.year3 || ''}
+                                      onChange={(e) => handleStandardFeeChange(standard, 'year3', e.target.value)}
+                                      className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2.5 text-sm font-medium dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
+                          ))}
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Total Contract Value *
+                          {/* Grand Total */}
+                          <div className="mt-6 p-6 bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 rounded-xl border-2 border-primary/30">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="text-base font-bold text-gray-900 dark:text-white">
+                                  Three-Year Cycle Total
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  All {formData.isoStandards.length} standard{formData.isoStandards.length !== 1 ? 's' : ''} included
+                                </p>
+                              </div>
+                              <p className="text-2xl font-black text-primary">
+                                {formData.currency} {calculateTotalContractValue()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-100 dark:border-yellow-800">
+                          <svg className="mx-auto h-12 w-12 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <p className="mt-4 text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            No ISO standards selected
+                          </p>
+                          <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">
+                            Please select ISO standards in Step 2 to configure fees.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+
+
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="flex items-center mb-2">
+                          <input
+                            type="checkbox"
+                            name="recertificationFeeTbd"
+                            checked={formData.recertificationFeeTbd}
+                            onChange={handleInputChange}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <label className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Recertification Fee TBD
                           </label>
+                        </div>
+                        {!formData.recertificationFeeTbd && (
                           <div className="flex">
                             <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
                               {formData.currency}
                             </span>
                             <input
                               type="number"
-                              name="contractValue"
-                              value={formData.contractValue}
+                              name="recertificationFee"
+                              value={formData.recertificationFee}
                               onChange={handleInputChange}
-                              required
                               step="0.01"
+                              placeholder="Recertification fee"
                               className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             />
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Additional Fees Description
+                          Total Contract Value *
                         </label>
-                        <textarea
-                          name="additionalFeesDescription"
-                          value={formData.additionalFeesDescription}
-                          onChange={handleInputChange}
-                          rows={2}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
-                      </div>
-
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Payment Schedule
-                        </label>
-                        <textarea
-                          name="paymentSchedule"
-                          value={formData.paymentSchedule}
-                          onChange={handleInputChange}
-                          rows={3}
-                          placeholder="Describe the payment schedule..."
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                        />
+                        <div className="flex">
+                          <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">
+                            {formData.currency}
+                          </span>
+                          <input
+                            type="number"
+                            name="contractValue"
+                            value={formData.contractValue}
+                            onChange={handleInputChange}
+                            required
+                            step="0.01"
+                            className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
                       </div>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Additional Fees Description
+                      </label>
+                      <textarea
+                        name="additionalFeesDescription"
+                        value={formData.additionalFeesDescription}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Payment Schedule
+                      </label>
+                      <textarea
+                        name="paymentSchedule"
+                        value={formData.paymentSchedule}
+                        onChange={handleInputChange}
+                        rows={3}
+                        placeholder="Describe the payment schedule..."
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
                   </div>
+
                 )}
                 {currentStep === 4 && (
                   <div className="flex flex-col gap-6">
@@ -1116,9 +1119,32 @@ export default function NewContractPage() {
                   </div>
                 )}
               </form>
+
+              {/* Bottom Navigation Buttons */}
+              <div className="flex justify-between pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  disabled={currentStep === 1 || isLoading}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${currentStep === 1
+                    ? "text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                    : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
+                    }`}
+                >
+                  Previous Step
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitAndNext}
+                  disabled={isLoading}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  {currentStep < 4 ? "Next Step" : isLoading ? "Creating..." : "Create Contract"}
+                </button>
+              </div>
             </div>
+            {/* Summary Panel */}
           </div>
-          {/* Summary Panel */}
           <aside className="w-full">
             <div className="sticky top-8 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <h3 className="text-lg font-bold text-[#0d141b] dark:text-white pb-4 border-b border-slate-200 dark:border-slate-700">
@@ -1196,7 +1222,7 @@ export default function NewContractPage() {
             </div>
           </aside>
         </div>
-      </div>
-    </DashboardLayout>
+      </div >
+    </DashboardLayout >
   );
 }

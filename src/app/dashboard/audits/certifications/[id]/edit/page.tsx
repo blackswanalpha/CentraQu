@@ -2,8 +2,10 @@
 
 import { DashboardLayout } from "@/components/Layouts/dashboard-layout";
 import { WidgetCard } from "@/components/Dashboard/widget-card";
-import { useState, use } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
+import { certificateService, CertificateTemplate, UpdateTemplateData } from "@/services/certificate.service";
+import { auditService } from "@/services/audit.service";
 
 export default function EditCertificationTemplatePage({
   params,
@@ -12,101 +14,116 @@ export default function EditCertificationTemplatePage({
 }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const [templateContent, setTemplateContent] = useState(`
-    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; border: 3px solid #1e40af; position: relative;">
-      <!-- Header Section -->
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #1e40af; font-size: 28px; font-weight: bold; margin-bottom: 4px; letter-spacing: 1px;">
-          AceQu International
-        </h1>
-        <div style="border-top: 2px solid #1e40af; width: 100px; margin: 8px auto;"></div>
-      </div>
+  const [templateContent, setTemplateContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [templateDetails, setTemplateDetails] = useState<CertificateTemplate | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(null);
 
-      <!-- Certificate Title -->
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h2 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 8px; letter-spacing: 2px;">CERTIFICATE</h2>
-        <p style="font-size: 16px; color: #374151; font-weight: 500;">of Registration</p>
-      </div>
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-      <!-- Introduction Text -->
-      <div style="margin-bottom: 25px;">
-        <p style="text-align: center; color: #374151; font-size: 15px; margin-bottom: 12px;">This certificate is issued to</p>
-      </div>
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      try {
+        setLoading(true);
+        const originalId = await resolvedParams.id;
+        let targetTemplateId = originalId;
 
-      <!-- Client Name -->
-      <div style="text-align: center; margin-bottom: 25px;">
-        <div style="border-bottom: 2px solid #1e40af; padding-bottom: 10px; margin-bottom: 8px; display: inline-block; min-width: 400px;">
-          <p style="font-size: 24px; font-weight: bold; color: #1e40af;">[CLIENT_NAME]</p>
-        </div>
-        <p style="font-size: 14px; color: #6b7280; margin-top: 8px;">[CLIENT_LOCATION]</p>
-      </div>
+        // Validate if 'id' is a valid UUID
+        if (!uuidRegex.test(originalId)) {
+          console.log(`ID ${originalId} is not a UUID, attempting to resolve as Audit ID...`);
+          try {
+            // 1. Try to fetch Audit
+            const audit = await auditService.getAudit(originalId);
+            console.log("Found Audit:", audit);
 
-      <!-- Certification Statement -->
-      <div style="margin-bottom: 25px;">
-        <p style="text-align: center; color: #374151; font-size: 14px; line-height: 1.6;">
-          AceQu International Ltd – UK Certifies that the Management System of the above organisation has been audited and found to be in accordance with the requirements of the management system standards detailed below:
-        </p>
-      </div>
+            // 2. Try to find Certification for this Audit
+            // Strategy: Use certificate_number from audit to find the certification
+            if (audit.certificate_number) {
+              const certsResponse = await certificateService.getCertifications({
+                search: audit.certificate_number
+              });
 
-      <!-- ISO Standard -->
-      <div style="text-align: center; margin-bottom: 25px;">
-        <div style="background-color: #eff6ff; border: 2px solid #1e40af; padding: 15px; display: inline-block; min-width: 300px;">
-          <p style="font-weight: bold; font-size: 22px; color: #1e40af; margin-bottom: 4px;">[CERTIFICATION_STANDARD]</p>
-          <p style="font-size: 14px; color: #374151;">Quality Management System</p>
-        </div>
-      </div>
+              if (certsResponse.results && certsResponse.results.length > 0) {
+                const certification = certsResponse.results[0];
+                if (certification.template && certification.template.id) {
+                  targetTemplateId = certification.template.id;
+                  console.log(`Resolved Template ID from Certification: ${targetTemplateId}`);
+                } else {
+                  console.log("Certification found but no template assigned, falling back to default.");
+                }
+              }
+            }
 
-      <!-- Scope Section -->
-      <div style="margin-bottom: 25px;">
-        <p style="font-weight: bold; font-size: 15px; color: #1f2937; margin-bottom: 8px;">Scope of Certification</p>
-        <p style="color: #374151; font-size: 14px; line-height: 1.5;">[AUDIT_SCOPE]</p>
-      </div>
+            // 3. If still no targetTemplateId (or it's still originalId), try to find default template via ISO Standard
+            if (targetTemplateId === originalId && audit.iso_standard) {
+              // Find default template for this ISO Standard
+              const templatesResponse = await certificateService.getTemplates({
+                iso_standard: audit.iso_standard,
+                is_default: true
+              });
 
-      <!-- Certificate Details Grid -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; font-size: 14px;">
-        <div style="padding: 8px; background-color: #f9fafb;">
-          <strong style="color: #1f2937;">Certification Number:</strong>
-          <p style="color: #374151; margin-top: 4px;">[CERTIFICATE_NUMBER]</p>
-        </div>
-        <div style="padding: 8px; background-color: #f9fafb;">
-          <strong style="color: #1f2937;">Date of original registration:</strong>
-          <p style="color: #374151; margin-top: 4px;">[ORIGINAL_REGISTRATION_DATE]</p>
-        </div>
-        <div style="padding: 8px; background-color: #f9fafb;">
-          <strong style="color: #1f2937;">Date of certificate:</strong>
-          <p style="color: #374151; margin-top: 4px;">[ISSUE_DATE]</p>
-        </div>
-        <div style="padding: 8px; background-color: #f9fafb;">
-          <strong style="color: #1f2937;">Date of certificate expiry:</strong>
-          <p style="color: #374151; margin-top: 4px;">[EXPIRY_DATE]</p>
-        </div>
-      </div>
+              if (templatesResponse.results && templatesResponse.results.length > 0) {
+                targetTemplateId = templatesResponse.results[0].id;
+                console.log(`Resolved Default Template ID for ISO ${audit.iso_standard}: ${targetTemplateId}`);
+              } else {
+                // Fallback: Try to find ANY template for this ISO standard
+                const anyTemplateResponse = await certificateService.getTemplates({
+                  iso_standard: audit.iso_standard
+                });
+                if (anyTemplateResponse.results && anyTemplateResponse.results.length > 0) {
+                  targetTemplateId = anyTemplateResponse.results[0].id;
+                  console.log(`Resolved (Fallback) Template ID for ISO ${audit.iso_standard}: ${targetTemplateId}`);
+                } else {
+                  throw new Error(`No templates found for ISO Standard ${audit.iso_standard}`);
+                }
+              }
+            } else if (targetTemplateId === originalId) {
+              throw new Error("Audit does not have an ISO Standard assigned and no certificate number found");
+            }
+          } catch (err) {
+            console.warn("Failed to resolve template ID from Audit:", err);
+            setError("Could not resolve a valid template for this audit. Please ensure an ISO Standard is assigned and a template exists.");
+            setLoading(false);
+            return;
+          }
+        }
 
-      <!-- Accreditation Logos Section -->
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="display: inline-flex; gap: 30px; align-items: center; justify-content: center;">
-          <div style="text-align: center;">
-            <p style="font-weight: bold; font-size: 12px; color: #1e40af;">CQI IRCA</p>
-            <p style="font-size: 10px; color: #6b7280;">LEADING QUALITY FOR 100 YEARS</p>
-            <p style="font-size: 10px; color: #6b7280; font-weight: bold;">CORPORATE MEMBER</p>
-          </div>
-        </div>
-      </div>
+        setTemplateId(targetTemplateId);
+        const data = await certificateService.getTemplate(targetTemplateId);
+        setTemplateDetails(data);
 
-      <!-- Signature Section -->
-      <div style="text-align: center; margin-bottom: 25px;">
-        <div style="border-top: 2px solid #1f2937; width: 200px; margin: 0 auto 8px;"></div>
-        <p style="font-weight: bold; font-size: 14px; color: #1f2937;">Authorised Signatory</p>
-      </div>
+        if (data.template_type === 'html' && data.template_file) {
+          // Assuming data.template_file provides a URL to the template content
+          // We need to fetch the content from that URL
+          // Construct full URL if data.template_file is relative
+          const templateFileUrl = data.template_file.startsWith('http')
+            ? data.template_file
+            : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}${data.template_file}`;
 
-      <!-- Footer -->
-      <div style="text-align: center; font-size: 11px; color: #6b7280; line-height: 1.5; border-top: 1px solid #d1d5db; padding-top: 15px;">
-        <p style="margin-bottom: 8px; font-weight: 500;">AceQu International Ltd, 168 City Road, Cardiff, Wales, CF24 3JE, United Kingdom</p>
-        <p style="margin-bottom: 4px;">This certificate is the property of AceQu International Limited and should be returned back upon request.</p>
-        <p>The certificate cannot be transferred and is valid for the client, address and scope stated above.</p>
-      </div>
-    </div>
-  `);
+          const response = await fetch(templateFileUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch template content: ${response.statusText}`);
+          }
+          const htmlContent = await response.text();
+          setTemplateContent(htmlContent);
+        } else if (data.template_type === 'html') {
+          // If it's an HTML template type but no file is attached, start with empty content
+          setTemplateContent('');
+        } else {
+          setTemplateContent(`<!-- Template type ${data.template_type} is not directly editable as HTML. Please choose an HTML template. -->`);
+        }
+      } catch (err) {
+        console.error("Failed to fetch template:", err);
+        setError(`Failed to load template: ${err instanceof Error ? err.message : String(err)}`);
+        setTemplateContent(`<!-- Error loading template. Please check console for details. -->`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplate();
+  }, [resolvedParams.id]);
 
   const [completionStatus, setCompletionStatus] = useState({
     header: true,
@@ -143,10 +160,45 @@ export default function EditCertificationTemplatePage({
     }
   };
 
-  const handleSave = () => {
-    // Save template logic
-    console.log("Saving template content:", templateContent);
-    router.push(`/dashboard/audits/certifications/${resolvedParams.id}`);
+  const handleSave = async () => {
+    if (!templateDetails) {
+      setError("No template loaded to save.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      if (!templateId) {
+        throw new Error("No template ID available for saving");
+      }
+
+      // Convert HTML string to a File-like Blob
+      const htmlBlob = new Blob([templateContent], { type: 'text/html' });
+      const htmlFile = new File([htmlBlob], `${templateDetails.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`, { type: 'text/html' });
+
+      const updateData: UpdateTemplateData = {
+        name: templateDetails.name,
+        description: templateDetails.description,
+        iso_standard: templateDetails.iso_standard?.id,
+        template_type: 'html', // Assuming we are only editing HTML templates here
+        template_file: htmlFile,
+        variables: templateDetails.variables,
+        is_active: templateDetails.is_active,
+        is_default: templateDetails.is_default,
+      };
+
+      await certificateService.updateTemplate(templateId, updateData);
+      console.log("Template saved successfully!");
+      // Optionally show a success message
+      const originalId = await resolvedParams.id;
+      router.push(`/dashboard/audits/certifications/${originalId}`);
+    } catch (err) {
+      console.error("Failed to save template:", err);
+      setError(`Failed to save template: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateProgress = () => {
@@ -216,165 +268,179 @@ export default function EditCertificationTemplatePage({
         </div>
 
         <div className="grid gap-8 grid-cols-1 lg:grid-cols-4">
-          {/* Rich Text Editor */}
-          <div className="lg:col-span-3">
-            <WidgetCard title="Template Editor">
-              <div className="space-y-4">
-                {/* Formatting Toolbar */}
-                <div className="flex gap-2 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
-                  <div className="flex gap-1">
-                    {formatButtons.map((button) => (
-                      <button
-                        key={button.id}
-                        onClick={() => applyFormat(button.command)}
-                        className={`px-3 py-2 rounded text-sm font-medium transition-colors ${activeFormat.includes(button.command)
-                          ? 'bg-primary text-white'
-                          : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        title={button.title}
+          {error && (
+            <div className="lg:col-span-4 p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+              {error}
+            </div>
+          )}
+          {loading ? (
+            <div className="lg:col-span-4 p-4 text-center text-lg text-gray-600 dark:text-gray-400">
+              Loading template...
+            </div>
+          ) : (
+            <>
+              {/* Rich Text Editor */}
+              <div className="lg:col-span-3">
+                <WidgetCard title="Template Editor">
+                  <div className="space-y-4">
+                    {/* Formatting Toolbar */}
+                    <div className="flex gap-2 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
+                      <div className="flex gap-1">
+                        {formatButtons.map((button) => (
+                          <button
+                            key={button.id}
+                            onClick={() => applyFormat(button.command)}
+                            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${activeFormat.includes(button.command)
+                              ? 'bg-primary text-white'
+                              : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              }`}
+                            title={button.title}
+                          >
+                            {button.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="border-l border-gray-300 dark:border-gray-600 mx-2"></div>
+
+                      <select
+                        className="px-3 py-2 border border-gray-300 rounded text-sm dark:bg-gray-800 dark:border-gray-600"
+                        onChange={(e) => document.execCommand('fontSize', false, e.target.value)}
+                        defaultValue="3"
                       >
-                        {button.label}
+                        <option value="1">8pt</option>
+                        <option value="2">10pt</option>
+                        <option value="3">12pt</option>
+                        <option value="4">14pt</option>
+                        <option value="5">18pt</option>
+                        <option value="6">24pt</option>
+                        <option value="7">36pt</option>
+                      </select>
+
+                      <input
+                        type="color"
+                        className="w-10 h-8 border border-gray-300 rounded cursor-pointer"
+                        onChange={(e) => document.execCommand('foreColor', false, e.target.value)}
+                        title="Text Color"
+                      />
+                    </div>
+
+                    {/* Rich Text Editor */}
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div
+                        id="template-editor"
+                        ref={(el) => {
+                          if (el && !el.innerHTML) {
+                            el.innerHTML = templateContent;
+                          }
+                        }}
+                        contentEditable={true}
+                        className="min-h-[600px] p-6 bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        onBlur={(e) => setTemplateContent(e.currentTarget.innerHTML)}
+                        onInput={(e) => setTemplateContent(e.currentTarget.innerHTML)}
+                        suppressContentEditableWarning={true}
+                      />
+                    </div>
+                  </div>
+                </WidgetCard>
+              </div>
+
+              {/* Sidebar */}
+              <div className="lg:col-span-1 space-y-6">
+                {/* Template Completion */}
+                <WidgetCard title="Template Completion">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Progress</span>
+                      <span className="text-lg font-bold text-primary">{calculateProgress()}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
+                      <div
+                        className="bg-primary h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${calculateProgress()}%` }}
+                      />
+                    </div>
+
+                    <div className="space-y-3 mt-4">
+                      {Object.entries(completionStatus).map(([key, completed]) => (
+                        <div key={key} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={completed}
+                            onChange={(e) => setCompletionStatus({
+                              ...completionStatus,
+                              [key]: e.target.checked
+                            })}
+                            className="rounded"
+                          />
+                          <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          {completed && <span className="text-green-500 text-sm">✓</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </WidgetCard>
+
+                {/* Template Variables */}
+                <WidgetCard title="Template Variables">
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Click to insert variables into your template:
+                    </p>
+                    {templateVariables.map((variable) => (
+                      <button
+                        key={variable}
+                        onClick={() => insertVariable(variable)}
+                        className="w-full text-left px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
+                      >
+                        [{variable}]
                       </button>
                     ))}
                   </div>
+                </WidgetCard>
 
-                  <div className="border-l border-gray-300 dark:border-gray-600 mx-2"></div>
+                {/* Template Actions */}
+                <WidgetCard title="Template Actions">
+                  <div className="space-y-3">
+                    <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
+                      🔄 Reset to Default
+                    </button>
+                    <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
+                      📥 Import Template
+                    </button>
+                    <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
+                      💾 Export Template
+                    </button>
+                    <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
+                      📧 Send for Review
+                    </button>
+                  </div>
+                </WidgetCard>
 
-                  <select
-                    className="px-3 py-2 border border-gray-300 rounded text-sm dark:bg-gray-800 dark:border-gray-600"
-                    onChange={(e) => document.execCommand('fontSize', false, e.target.value)}
-                  >
-                    <option value="1">8pt</option>
-                    <option value="2">10pt</option>
-                    <option value="3" selected>12pt</option>
-                    <option value="4">14pt</option>
-                    <option value="5">18pt</option>
-                    <option value="6">24pt</option>
-                    <option value="7">36pt</option>
-                  </select>
-
-                  <input
-                    type="color"
-                    className="w-10 h-8 border border-gray-300 rounded cursor-pointer"
-                    onChange={(e) => document.execCommand('foreColor', false, e.target.value)}
-                    title="Text Color"
-                  />
-                </div>
-
-                {/* Rich Text Editor */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <div
-                    id="template-editor"
-                    ref={(el) => {
-                      if (el && !el.innerHTML) {
-                        el.innerHTML = templateContent;
-                      }
-                    }}
-                    contentEditable
-                    className="min-h-[600px] p-6 bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    onBlur={(e) => setTemplateContent(e.currentTarget.innerHTML)}
-                    onInput={(e) => setTemplateContent(e.currentTarget.innerHTML)}
-                    suppressContentEditableWarning={true}
-                  />
-                </div>
-              </div>
-            </WidgetCard>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Template Completion */}
-            <WidgetCard title="Template Completion">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">Progress</span>
-                  <span className="text-lg font-bold text-primary">{calculateProgress()}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
-                  <div
-                    className="bg-primary h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${calculateProgress()}%` }}
-                  />
-                </div>
-
-                <div className="space-y-3 mt-4">
-                  {Object.entries(completionStatus).map(([key, completed]) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={completed}
-                        onChange={(e) => setCompletionStatus({
-                          ...completionStatus,
-                          [key]: e.target.checked
-                        })}
-                        className="rounded"
-                      />
-                      <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                      {completed && <span className="text-green-500 text-sm">✓</span>}
+                {/* Template History */}
+                <WidgetCard title="Edit History">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span>Template created</span>
+                      <span className="text-gray-500">Oct 24, 09:15</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex justify-between">
+                      <span>Header modified</span>
+                      <span className="text-gray-500">Oct 24, 10:30</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Variables added</span>
+                      <span className="text-gray-500">Oct 24, 11:45</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Current edit</span>
+                      <span className="text-green-600">Now</span>
+                    </div>
+                  </div>
+                </WidgetCard>
               </div>
-            </WidgetCard>
-
-            {/* Template Variables */}
-            <WidgetCard title="Template Variables">
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Click to insert variables into your template:
-                </p>
-                {templateVariables.map((variable) => (
-                  <button
-                    key={variable}
-                    onClick={() => insertVariable(variable)}
-                    className="w-full text-left px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-900"
-                  >
-                    [{variable}]
-                  </button>
-                ))}
-              </div>
-            </WidgetCard>
-
-            {/* Template Actions */}
-            <WidgetCard title="Template Actions">
-              <div className="space-y-3">
-                <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
-                  🔄 Reset to Default
-                </button>
-                <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
-                  📥 Import Template
-                </button>
-                <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
-                  💾 Export Template
-                </button>
-                <button className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900 text-left">
-                  📧 Send for Review
-                </button>
-              </div>
-            </WidgetCard>
-
-            {/* Template History */}
-            <WidgetCard title="Edit History">
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span>Template created</span>
-                  <span className="text-gray-500">Oct 24, 09:15</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Header modified</span>
-                  <span className="text-gray-500">Oct 24, 10:30</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Variables added</span>
-                  <span className="text-gray-500">Oct 24, 11:45</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Current edit</span>
-                  <span className="text-green-600">Now</span>
-                </div>
-              </div>
-            </WidgetCard>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </DashboardLayout>

@@ -5,6 +5,7 @@ import { WidgetCard } from "@/components/Dashboard/widget-card";
 import { useState, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auditService } from "@/services/audit.service";
+import { CertificatePreview } from "@/components/Certifications/certificate-preview";
 
 export default function CertificationDetailPage({
   params,
@@ -17,6 +18,7 @@ export default function CertificationDetailPage({
   const [isLoading, setIsLoading] = useState(true);
   const [certificateData, setCertificateData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Fetch certificate data from API (using audit data for certificate)
   useEffect(() => {
@@ -24,24 +26,24 @@ export default function CertificationDetailPage({
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Fetch audit data to create certificate
         const auditData = await auditService.getAudit(resolvedParams.id);
-        
+
         // Calculate audit progress to verify it's complete
         const progress = calculateAuditProgress(auditData.checklist_responses || []);
-        
+
         console.log("Audit progress for ID", resolvedParams.id, ":", progress);
         console.log("Audit data:", auditData);
-        
+
         // Check if audit is ready for certification
         const isReadyForCertification = progress.percentage === 100;
-        
+
         if (!isReadyForCertification) {
           console.warn(`Audit ${resolvedParams.id} is not 100% complete:`, progress);
           // Don't return early - still allow template viewing/editing
         }
-        
+
         // Create certificate data from audit
         const certificate = {
           id: auditData.id,
@@ -62,15 +64,17 @@ export default function CertificationDetailPage({
           status: auditData.status,
           progress: progress,
           certificateNumber: auditData.certificate_number || `CERT-${auditData.audit_number}`,
+          certNumInt: auditData.cert_num_int || '',
           issueDate: auditData.certificate_issue_date || new Date().toISOString().split('T')[0],
           expiryDate: auditData.certificate_expiry_date || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3 years validity
+          originalRegistrationDate: auditData.certificate_original_registration_date || new Date().toISOString().split('T')[0],
           isIssued: !!auditData.certificate_number,
           certificationBody: "AssureHub Certification Body",
           location: auditData.client_data?.address || "Client Location",
           registrationNumber: auditData.registration_number || `REG-${auditData.audit_number}`,
           isReadyForCertification: isReadyForCertification,
         };
-        
+
         setCertificateData(certificate);
       } catch (error) {
         console.error("Failed to load certificate:", error);
@@ -79,7 +83,7 @@ export default function CertificationDetailPage({
         setIsLoading(false);
       }
     };
-    
+
     fetchCertificate();
   }, [resolvedParams.id]);
 
@@ -88,11 +92,11 @@ export default function CertificationDetailPage({
     if (!checklistResponses || checklistResponses.length === 0) {
       return { percentage: 0, completed: 0, total: 0 };
     }
-    
+
     const total = checklistResponses.length;
     const completed = checklistResponses.filter((r: any) => r.compliance_status !== 'pending').length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-    
+
     return { percentage, completed, total };
   };
 
@@ -100,32 +104,40 @@ export default function CertificationDetailPage({
     try {
       // Save certificate template changes without issuing the certificate
       const certificateUpdate = {
+        certificate_number: certificateData.certificateNumber,
+        cert_num_int: certificateData.certNumInt,
         certificate_issue_date: certificateData.issueDate,
         certificate_expiry_date: certificateData.expiryDate,
-        // Don't set certificate_number here - only when actually issued
+        certificate_original_registration_date: certificateData.originalRegistrationDate,
       };
 
       // Update the audit with certificate template information
       await auditService.updateAudit(resolvedParams.id, certificateUpdate);
-      
-      console.log("Certificate template saved:", certificateUpdate);
+
+      console.log("Certificate information saved:", certificateUpdate);
+
+      // Show success message
+      alert("✓ Certificate information saved successfully!");
       setIsEditing(false);
-      
+
       // Refresh the certificate data
       const updatedAudit = await auditService.getAudit(resolvedParams.id);
       const progress = calculateAuditProgress(updatedAudit.checklist_responses || []);
-      
+
       const updatedCertificate = {
         ...certificateData,
+        certificateNumber: updatedAudit.certificate_number || certificateData.certificateNumber,
+        certNumInt: updatedAudit.cert_num_int || certificateData.certNumInt,
         issueDate: updatedAudit.certificate_issue_date || certificateData.issueDate,
         expiryDate: updatedAudit.certificate_expiry_date || certificateData.expiryDate,
+        originalRegistrationDate: updatedAudit.certificate_original_registration_date || certificateData.originalRegistrationDate,
         progress: progress,
       };
-      
+
       setCertificateData(updatedCertificate);
     } catch (error) {
-      console.error("Failed to save certificate template:", error);
-      alert("Failed to save certificate template. Please try again.");
+      console.error("Failed to save certificate information:", error);
+      alert("❌ Failed to save certificate information. Please try again.");
     }
   };
 
@@ -147,6 +159,7 @@ export default function CertificationDetailPage({
         certificate_number: certificateData.certificateNumber,
         certificate_issue_date: certificateData.issueDate,
         certificate_expiry_date: certificateData.expiryDate,
+        certificate_original_registration_date: certificateData.originalRegistrationDate,
         status: 'COMPLETED' // Ensure audit is marked as completed
       };
 
@@ -154,9 +167,9 @@ export default function CertificationDetailPage({
 
       // Update the audit with certificate information
       await auditService.updateAudit(resolvedParams.id, certificateUpdate);
-      
+
       console.log("Certificate issued successfully:", certificateUpdate);
-      
+
       // Show success message and redirect
       // Surveillance tracking is now handled automatically via backend Certification sync
       alert("Certificate issued successfully! Check the Audit Tracker to view surveillance scheduling.");
@@ -172,10 +185,10 @@ export default function CertificationDetailPage({
       // Implementation for downloading certificate as PDF
       // This would typically call a backend API to generate and download the PDF
       console.log("Downloading certificate PDF for:", certificateData.certificateNumber);
-      
+
       // For now, show a placeholder message
       alert("PDF download functionality will be implemented. Certificate: " + certificateData.certificateNumber);
-      
+
       // TODO: Implement actual PDF generation and download
       // Example API call:
       // const response = await fetch(`/api/v1/certificates/${certificateData.id}/pdf`);
@@ -195,18 +208,18 @@ export default function CertificationDetailPage({
     try {
       // Implementation for sending certificate to client via email
       console.log("Sending certificate to client:", certificateData.clientName);
-      
+
       if (!certificateData.clientData?.email || certificateData.clientData?.email === 'noemail@example.com') {
         alert("Cannot send certificate: Client email address not available. Please update client information.");
         return;
       }
-      
+
       // For now, show a confirmation message
       const confirmSend = confirm(`Send certificate ${certificateData.certificateNumber} to ${certificateData.clientData.email}?`);
-      
+
       if (confirmSend) {
         alert("Certificate email functionality will be implemented. Would send to: " + certificateData.clientData.email);
-        
+
         // TODO: Implement actual email sending
         // Example API call:
         // await fetch(`/api/v1/certificates/${certificateData.id}/send-email`, {
@@ -238,7 +251,7 @@ export default function CertificationDetailPage({
       if (!confirmRevoke) return;
 
       const userInput = prompt("Please type 'REVOKE' to confirm certificate revocation:");
-      
+
       if (userInput !== 'REVOKE') {
         alert("Certificate revocation cancelled. Please type 'REVOKE' exactly to confirm.");
         return;
@@ -246,21 +259,22 @@ export default function CertificationDetailPage({
 
       // Implementation for revoking the certificate
       console.log("Revoking certificate:", certificateData.certificateNumber);
-      
+
       const revokeUpdate = {
         certificate_number: '', // Clear certificate number
-        certificate_issue_date: null, // Clear issue date
-        certificate_expiry_date: null, // Clear expiry date
+        certificate_issue_date: undefined, // Clear issue date
+        certificate_expiry_date: undefined, // Clear expiry date
+        certificate_original_registration_date: undefined, // Clear original registration date
         status: 'COMPLETED' // Keep audit status as completed but remove certificate
       };
 
       await auditService.updateAudit(resolvedParams.id, revokeUpdate);
-      
+
       alert("Certificate has been successfully revoked.");
-      
+
       // Refresh the page to show updated status
       window.location.reload();
-      
+
     } catch (error) {
       console.error("Failed to revoke certificate:", error);
       alert("Failed to revoke certificate. Please try again.");
@@ -268,23 +282,8 @@ export default function CertificationDetailPage({
   };
 
   const handlePreviewPDF = async () => {
-    try {
-      // Implementation for previewing certificate as PDF in new window/tab
-      console.log("Previewing certificate PDF for:", certificateData.certificateNumber);
-      
-      // For now, show a placeholder message
-      alert("PDF preview functionality will be implemented. Would show preview of certificate: " + certificateData.certificateNumber);
-      
-      // TODO: Implement actual PDF preview
-      // Example implementation:
-      // const response = await fetch(`/api/v1/certificates/${certificateData.id}/preview-pdf`);
-      // const blob = await response.blob();
-      // const url = window.URL.createObjectURL(blob);
-      // window.open(url, '_blank');
-    } catch (error) {
-      console.error("Failed to preview PDF:", error);
-      alert("Failed to preview PDF. Please try again.");
-    }
+    // Show the preview modal
+    setShowPreview(true);
   };
 
   if (isLoading) {
@@ -321,7 +320,7 @@ export default function CertificationDetailPage({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <button 
+            <button
               onClick={() => router.back()}
               className="text-primary hover:text-primary-hover mb-2"
             >
@@ -340,13 +339,13 @@ export default function CertificationDetailPage({
           <div className="flex gap-2">
             {isEditing ? (
               <>
-                <button 
+                <button
                   onClick={() => setIsEditing(false)}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleSave}
                   className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover"
                 >
@@ -357,27 +356,26 @@ export default function CertificationDetailPage({
               <>
                 {!certificateData.isIssued ? (
                   <>
-                    <button 
+                    <button
                       onClick={() => router.push(`/dashboard/audits/certifications/${resolvedParams.id}/edit`)}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
                     >
                       Edit Template
                     </button>
-                    <button 
+                    <button
                       onClick={handlePreviewPDF}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
                     >
                       Preview PDF
                     </button>
-                    <button 
+                    <button
                       onClick={handleIssueCertificate}
                       disabled={!certificateData.isReadyForCertification}
-                      className={`px-4 py-2 rounded-lg ${
-                        certificateData.isReadyForCertification
-                          ? 'bg-green-600 text-white hover:bg-green-700'
-                          : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                      }`}
-                      title={!certificateData.isReadyForCertification 
+                      className={`px-4 py-2 rounded-lg ${certificateData.isReadyForCertification
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        }`}
+                      title={!certificateData.isReadyForCertification
                         ? `Audit must be 100% complete to issue certificate. Current: ${certificateData.progress?.percentage || 0}%`
                         : 'Issue Certificate'
                       }
@@ -387,19 +385,19 @@ export default function CertificationDetailPage({
                   </>
                 ) : (
                   <>
-                    <button 
+                    <button
                       onClick={handleDownloadPDF}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
                     >
                       Download PDF
                     </button>
-                    <button 
+                    <button
                       onClick={handleSendToClient}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
                     >
                       Send to Client
                     </button>
-                    <button 
+                    <button
                       onClick={handleRevokeCertificate}
                       className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                     >
@@ -422,10 +420,10 @@ export default function CertificationDetailPage({
                   Audit Not Ready for Certification
                 </h3>
                 <p className="text-yellow-700 dark:text-yellow-300 text-sm">
-                  This audit has completed {certificateData.progress?.completed || 0} of {certificateData.progress?.total || 0} checklist items 
+                  This audit has completed {certificateData.progress?.completed || 0} of {certificateData.progress?.total || 0} checklist items
                   ({certificateData.progress?.percentage || 0}%). All checklist items must be completed (100%) before a certificate can be issued.
                 </p>
-                <a 
+                <a
                   href={`/dashboard/audits/${resolvedParams.id}`}
                   className="inline-flex items-center gap-1 mt-2 text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-100 text-sm font-medium"
                 >
@@ -440,6 +438,16 @@ export default function CertificationDetailPage({
           {/* Certificate Template Editor */}
           <WidgetCard title="Certificate Template">
             <div className="bg-white border-2 border-gray-200 rounded-lg p-8 min-h-[800px] shadow-inner">
+              {/* Header Image */}
+              <div className="mb-8">
+                <img
+                  src="/img/5.png"
+                  alt="Certification Header"
+                  className="w-full h-auto max-h-24 object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+
               {/* Certificate Header */}
               <div className="text-center mb-8">
                 <div className="text-primary font-bold text-2xl mb-2">
@@ -447,7 +455,7 @@ export default function CertificationDetailPage({
                     <input
                       type="text"
                       value={certificateData.certificationBody || "AssureHub Certification Body"}
-                      onChange={(e) => setCertificateData({...certificateData, certificationBody: e.target.value})}
+                      onChange={(e) => setCertificateData({ ...certificateData, certificationBody: e.target.value })}
                       className="w-full text-center border-b border-gray-300 bg-transparent"
                     />
                   ) : (
@@ -473,7 +481,7 @@ export default function CertificationDetailPage({
                       <input
                         type="text"
                         value={certificateData.clientName}
-                        onChange={(e) => setCertificateData({...certificateData, clientName: e.target.value})}
+                        onChange={(e) => setCertificateData({ ...certificateData, clientName: e.target.value })}
                         className="w-full text-center text-xl font-bold border-none bg-transparent"
                       />
                     ) : (
@@ -489,7 +497,7 @@ export default function CertificationDetailPage({
                       <input
                         type="text"
                         value={certificateData.location || certificateData.clientData?.address || "Client Location"}
-                        onChange={(e) => setCertificateData({...certificateData, location: e.target.value})}
+                        onChange={(e) => setCertificateData({ ...certificateData, location: e.target.value })}
                         className="ml-2 border-b border-gray-300 bg-transparent flex-1"
                       />
                     ) : (
@@ -502,7 +510,7 @@ export default function CertificationDetailPage({
                       <input
                         type="text"
                         value={certificateData.registrationNumber || `REG-${certificateData.auditNumber}`}
-                        onChange={(e) => setCertificateData({...certificateData, registrationNumber: e.target.value})}
+                        onChange={(e) => setCertificateData({ ...certificateData, registrationNumber: e.target.value })}
                         className="ml-2 border-b border-gray-300 bg-transparent flex-1"
                       />
                     ) : (
@@ -518,7 +526,7 @@ export default function CertificationDetailPage({
                       <input
                         type="text"
                         value={certificateData.standard}
-                        onChange={(e) => setCertificateData({...certificateData, standard: e.target.value})}
+                        onChange={(e) => setCertificateData({ ...certificateData, standard: e.target.value })}
                         className="w-full text-center border-b border-gray-300 bg-transparent"
                       />
                     ) : (
@@ -532,7 +540,7 @@ export default function CertificationDetailPage({
                   {isEditing ? (
                     <textarea
                       value={certificateData.scope}
-                      onChange={(e) => setCertificateData({...certificateData, scope: e.target.value})}
+                      onChange={(e) => setCertificateData({ ...certificateData, scope: e.target.value })}
                       className="w-full mt-2 p-2 border border-gray-300 rounded bg-transparent"
                       rows={3}
                     />
@@ -541,14 +549,40 @@ export default function CertificationDetailPage({
                   )}
                 </div>
 
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-3 text-sm">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 text-sm">
                   <div>
-                    <span className="font-semibold">Issue Date:</span>
+                    <span className="font-semibold">Certificate Number:</span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={certificateData.certificateNumber}
+                        onChange={(e) => setCertificateData({ ...certificateData, certificateNumber: e.target.value })}
+                        className="ml-2 border-b border-gray-300 bg-transparent"
+                      />
+                    ) : (
+                      <span className="ml-2">{certificateData.certificateNumber}</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Date of original registration:</span>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={certificateData.originalRegistrationDate}
+                        onChange={(e) => setCertificateData({ ...certificateData, originalRegistrationDate: e.target.value })}
+                        className="ml-2 border-b border-gray-300 bg-transparent"
+                      />
+                    ) : (
+                      <span className="ml-2">{certificateData.originalRegistrationDate}</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Date of certificate (Issue):</span>
                     {isEditing ? (
                       <input
                         type="date"
                         value={certificateData.issueDate}
-                        onChange={(e) => setCertificateData({...certificateData, issueDate: e.target.value})}
+                        onChange={(e) => setCertificateData({ ...certificateData, issueDate: e.target.value })}
                         className="ml-2 border-b border-gray-300 bg-transparent"
                       />
                     ) : (
@@ -556,29 +590,16 @@ export default function CertificationDetailPage({
                     )}
                   </div>
                   <div>
-                    <span className="font-semibold">Expiry Date:</span>
+                    <span className="font-semibold">Date of certificate expiry:</span>
                     {isEditing ? (
                       <input
                         type="date"
                         value={certificateData.expiryDate}
-                        onChange={(e) => setCertificateData({...certificateData, expiryDate: e.target.value})}
+                        onChange={(e) => setCertificateData({ ...certificateData, expiryDate: e.target.value })}
                         className="ml-2 border-b border-gray-300 bg-transparent"
                       />
                     ) : (
                       <span className="ml-2">{certificateData.expiryDate}</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-semibold">Certificate No:</span>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={certificateData.certificateNumber}
-                        onChange={(e) => setCertificateData({...certificateData, certificateNumber: e.target.value})}
-                        className="ml-2 border-b border-gray-300 bg-transparent"
-                      />
-                    ) : (
-                      <span className="ml-2">{certificateData.certificateNumber}</span>
                     )}
                   </div>
                 </div>
@@ -593,7 +614,7 @@ export default function CertificationDetailPage({
                     <input
                       type="text"
                       value={certificateData.leadAuditor}
-                      onChange={(e) => setCertificateData({...certificateData, leadAuditor: e.target.value})}
+                      onChange={(e) => setCertificateData({ ...certificateData, leadAuditor: e.target.value })}
                       className="text-center border-b border-gray-300 bg-transparent"
                     />
                   ) : (
@@ -625,7 +646,7 @@ export default function CertificationDetailPage({
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Audit Dates</span>
                   <span className="font-medium">
-                    {certificateData.actualStartDate && certificateData.actualEndDate 
+                    {certificateData.actualStartDate && certificateData.actualEndDate
                       ? `${new Date(certificateData.actualStartDate).toLocaleDateString()} - ${new Date(certificateData.actualEndDate).toLocaleDateString()}`
                       : `${new Date(certificateData.plannedStartDate).toLocaleDateString()} - ${new Date(certificateData.plannedEndDate).toLocaleDateString()}`
                     }
@@ -638,6 +659,86 @@ export default function CertificationDetailPage({
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Audit Type</span>
                   <span className="font-medium">{certificateData.auditType}</span>
+                </div>
+              </div>
+            </WidgetCard>
+
+            {/* Certificate Information Form */}
+            <WidgetCard title="Certificate Information">
+              <div className="space-y-4">
+                {/* Certificate Number (Internal) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Certificate Number (Internal)
+                  </label>
+                  <input
+                    type="text"
+                    value={certificateData.certNumInt}
+                    onChange={(e) => setCertificateData({ ...certificateData, certNumInt: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:border-gray-600"
+                    placeholder="e.g., 11034"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Internal certificate number for tracking
+                  </p>
+                </div>
+
+                {/* Date of Original Registration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date of Original Registration
+                  </label>
+                  <input
+                    type="date"
+                    value={certificateData.originalRegistrationDate}
+                    onChange={(e) => setCertificateData({ ...certificateData, originalRegistrationDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:border-gray-600"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    The date when the client was first registered/certified
+                  </p>
+                </div>
+
+                {/* Date of Certificate (Issue) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date of Certificate (Issue)
+                  </label>
+                  <input
+                    type="date"
+                    value={certificateData.issueDate}
+                    onChange={(e) => setCertificateData({ ...certificateData, issueDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:border-gray-600"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    The date when the current certificate was issued
+                  </p>
+                </div>
+
+                {/* Date of Certificate Expiry */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Date of Certificate Expiry
+                  </label>
+                  <input
+                    type="date"
+                    value={certificateData.expiryDate}
+                    onChange={(e) => setCertificateData({ ...certificateData, expiryDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-800 dark:border-gray-600"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    The expiration date of the certificate (typically 3 years from issue)
+                  </p>
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={handleSave}
+                    className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+                  >
+                    💾 Save Certificate Information
+                  </button>
                 </div>
               </div>
             </WidgetCard>
@@ -699,6 +800,14 @@ export default function CertificationDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Certificate Preview Modal */}
+      {showPreview && (
+        <CertificatePreview
+          certificateData={certificateData}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </DashboardLayout>
   );
 }

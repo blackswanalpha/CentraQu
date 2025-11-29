@@ -44,6 +44,9 @@ export interface Audit {
   certificate_number?: string;
   certificate_issue_date?: string;
   certificate_expiry_date?: string;
+  certificate_original_registration_date?: string;
+  cert_num_int?: string;
+  registration_number?: string;
   created_by?: number;
   created_by_name?: string;
   created_at: string;
