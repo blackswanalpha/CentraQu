@@ -223,7 +223,7 @@ export interface FormElement {
 }
 
 
-const BASE_URL = 'http://localhost:8000/api/v1/templates/';
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/templates/`;
 
 // Helper to get auth token - assuming it's stored in localStorage or similar
 const getAuthToken = (): string | null => {
@@ -272,8 +272,16 @@ export const templateService = {
 
     async listTemplates(): Promise<Template[]> {
         try {
-            const response = await axiosInstance.get<Template[]>('');
-            return response.data;
+            const response = await axiosInstance.get<any>('');
+            // Handle pagination (Django REST Framework)
+            if (response.data && Array.isArray(response.data.results)) {
+                return response.data.results;
+            }
+            // Handle no pagination
+            if (Array.isArray(response.data)) {
+                return response.data;
+            }
+            return [];
         } catch (error) {
             console.error('Error listing templates:', error);
             throw error;

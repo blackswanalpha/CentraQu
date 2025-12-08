@@ -14,6 +14,11 @@ export interface Opportunity {
     id: number;
     name: string;
     industry?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+    website?: string;
+    contact_person?: string;
   };
   client_id?: number;
   client_name?: string; // Used in list view
@@ -87,7 +92,7 @@ export const opportunityService = {
     page?: number;
   }): Promise<OpportunityListResponse> {
     const queryParams = new URLSearchParams();
-    
+
     if (params?.status) queryParams.append('status', params.status);
     if (params?.service_type) queryParams.append('service_type', params.service_type);
     if (params?.owner) queryParams.append('owner', params.owner.toString());
@@ -95,7 +100,7 @@ export const opportunityService = {
     if (params?.search) queryParams.append('search', params.search);
     if (params?.ordering) queryParams.append('ordering', params.ordering);
     if (params?.page) queryParams.append('page', params.page.toString());
-    
+
     const endpoint = `/opportunities/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return apiClient.get<OpportunityListResponse>(endpoint);
   },

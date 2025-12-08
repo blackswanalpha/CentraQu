@@ -1,3 +1,8 @@
+/**
+ * Document Service
+ * Handles all document-related API calls to backend_centra
+ */
+
 import { apiClient } from '@/lib/api-client';
 
 // Types
@@ -87,68 +92,61 @@ export const documentService = {
         category?: number;
         access_level?: string;
         is_active?: boolean;
-        client?: number;
+        client?: number | string;
         page?: number;
         page_size?: number;
+        ordering?: string;
     }): Promise<DocumentListResponse> {
-        const response = await apiClient.get('/documents/', { params });
-        return response.data;
+        const queryParams = new URLSearchParams();
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.document_type) queryParams.append('document_type', params.document_type);
+        if (params?.category) queryParams.append('category', params.category.toString());
+        if (params?.access_level) queryParams.append('access_level', params.access_level);
+        if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
+        if (params?.client) queryParams.append('client', params.client.toString());
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+        if (params?.ordering) queryParams.append('ordering', params.ordering);
+
+        const endpoint = `/documents/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+        return apiClient.get<DocumentListResponse>(endpoint);
     },
 
     async getDocument(id: string | number): Promise<Document> {
-        const response = await apiClient.get(`/documents/${id}/`);
-        return response.data;
+        return apiClient.get<Document>(`/documents/${id}/`);
     },
 
     async createDocument(data: FormData): Promise<Document> {
-        const response = await apiClient.post('/documents/', data, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
-        return response.data;
+        // Content-Type header is handled by apiClient/browser for FormData
+        return apiClient.post<Document>('/documents/', data);
     },
 
     async updateDocument(id: string | number, data: Partial<Document> | FormData): Promise<Document> {
-        const response = await apiClient.put(`/documents/${id}/`, data, {
-            headers: data instanceof FormData ? {
-                'Content-Type': 'multipart/form-data',
-            } : undefined,
-        });
-        return response.data;
+        return apiClient.put<Document>(`/documents/${id}/`, data);
     },
 
     async patchDocument(id: string | number, data: Partial<Document>): Promise<Document> {
-        const response = await apiClient.patch(`/documents/${id}/`, data);
-        return response.data;
+        return apiClient.patch<Document>(`/documents/${id}/`, data);
     },
 
     async deleteDocument(id: string | number): Promise<void> {
-        await apiClient.delete(`/documents/${id}/`);
+        return apiClient.delete<void>(`/documents/${id}/`);
     },
 
     async getStats(): Promise<DocumentLibraryStats> {
-        const response = await apiClient.get('/documents/stats/');
-        return response.data;
+        return apiClient.get<DocumentLibraryStats>('/documents/stats/');
     },
 
     async getRecentDocuments(limit: number = 10): Promise<Document[]> {
-        const response = await apiClient.get('/documents/recent/', {
-            params: { limit },
-        });
-        return response.data;
+        return apiClient.get<Document[]>(`/documents/recent/?limit=${limit}`);
     },
 
     async getExpiringDocuments(days: number = 30): Promise<Document[]> {
-        const response = await apiClient.get('/documents/expiring/', {
-            params: { days },
-        });
-        return response.data;
+        return apiClient.get<Document[]>(`/documents/expiring/?days=${days}`);
     },
 
     async trackDownload(id: string | number): Promise<{ success: boolean; file_url: string | null }> {
-        const response = await apiClient.post(`/documents/${id}/download/`);
-        return response.data;
+        return apiClient.post<{ success: boolean; file_url: string | null }>(`/documents/${id}/download/`);
     },
 
     // Folders
@@ -161,55 +159,57 @@ export const documentService = {
         page?: number;
         page_size?: number;
     }): Promise<FolderListResponse> {
-        const response = await apiClient.get('/folders/', { params });
-        return response.data;
+        const queryParams = new URLSearchParams();
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.is_public !== undefined) queryParams.append('is_public', params.is_public.toString());
+        if (params?.owner) queryParams.append('owner', params.owner.toString());
+        if (params?.client) queryParams.append('client', params.client.toString());
+        if (params?.parent_folder) queryParams.append('parent_folder', params.parent_folder.toString());
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+
+        const endpoint = `/folders/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+        return apiClient.get<FolderListResponse>(endpoint);
     },
 
     async getFolder(id: string | number): Promise<Folder> {
-        const response = await apiClient.get(`/folders/${id}/`);
-        return response.data;
+        return apiClient.get<Folder>(`/folders/${id}/`);
     },
 
     async createFolder(data: Partial<Folder>): Promise<Folder> {
-        const response = await apiClient.post('/folders/', data);
-        return response.data;
+        return apiClient.post<Folder>('/folders/', data);
     },
 
     async updateFolder(id: string | number, data: Partial<Folder>): Promise<Folder> {
-        const response = await apiClient.put(`/folders/${id}/`, data);
-        return response.data;
+        return apiClient.put<Folder>(`/folders/${id}/`, data);
     },
 
     async deleteFolder(id: string | number): Promise<void> {
-        await apiClient.delete(`/folders/${id}/`);
+        return apiClient.delete<void>(`/folders/${id}/`);
     },
 
     async getFolderDocuments(folderId: string | number): Promise<Document[]> {
-        const response = await apiClient.get(`/folders/${folderId}/documents/`);
-        return response.data;
+        return apiClient.get<Document[]>(`/folders/${folderId}/documents/`);
     },
 
     async addDocumentToFolder(folderId: string | number, documentId: number): Promise<{ success: boolean; message: string }> {
-        const response = await apiClient.post(`/folders/${folderId}/add_document/`, {
+        return apiClient.post<{ success: boolean; message: string }>(`/folders/${folderId}/add_document/`, {
             document_id: documentId,
         });
-        return response.data;
     },
 
     // Categories
     async getCategories(): Promise<DocumentCategory[]> {
-        const response = await apiClient.get('/categories/');
-        return response.data.results || response.data;
+        const response = await apiClient.get<any>('/categories/');
+        return response.results || response;
     },
 
     async getCategory(id: string | number): Promise<DocumentCategory> {
-        const response = await apiClient.get(`/categories/${id}/`);
-        return response.data;
+        return apiClient.get<DocumentCategory>(`/categories/${id}/`);
     },
 
     async createCategory(data: Partial<DocumentCategory>): Promise<DocumentCategory> {
-        const response = await apiClient.post('/categories/', data);
-        return response.data;
+        return apiClient.post<DocumentCategory>('/categories/', data);
     },
 };
 

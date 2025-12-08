@@ -38,6 +38,8 @@ export interface Contract {
   // Scope & Standards
   iso_standards?: string[];
   scope_of_work?: string;
+  scope_of_certification?: string;
+  objectives?: string;
 
   // Audit Process
   stage_1_audit_days?: number;
@@ -137,6 +139,7 @@ export interface ContractTemplate {
   name: string;
   description: string;
   template_type: string;
+  template_category?: 'CONTRACT_AGREEMENT_DEFAULT' | 'RENEWAL_CONTRACT_AGREEMENT_DEFAULT' | 'CUSTOM';
   template_data: any;
   status: string;
   is_active: boolean;
@@ -389,5 +392,211 @@ export const contractService = {
       template_json: templateJson
     });
   },
+
+  // ============================================================
+  // CONTRACT COSTS
+  // ============================================================
+
+  /**
+   * Get all costs for a contract
+   */
+  async getContractCosts(contractId: number | string): Promise<ContractCost[]> {
+    const response = await apiClient.get<{ results: ContractCost[] }>(`/contract-costs/?contract=${contractId}`);
+    return response.results || [];
+  },
+
+  /**
+   * Create a new contract cost
+   */
+  async createContractCost(data: Partial<ContractCost>): Promise<ContractCost> {
+    return apiClient.post<ContractCost>('/contract-costs/', data);
+  },
+
+  /**
+   * Update a contract cost
+   */
+  async updateContractCost(costId: number, data: Partial<ContractCost>): Promise<ContractCost> {
+    return apiClient.patch<ContractCost>(`/contract-costs/${costId}/`, data);
+  },
+
+  /**
+   * Delete a contract cost
+   */
+  async deleteContractCost(costId: number): Promise<void> {
+    return apiClient.delete(`/contract-costs/${costId}/`);
+  },
+
+  // ============================================================
+  // CONTRACT INCOMES
+  // ============================================================
+
+  /**
+   * Get all incomes for a contract
+   */
+  async getContractIncomes(contractId: number | string): Promise<ContractIncome[]> {
+    const response = await apiClient.get<{ results: ContractIncome[] }>(`/contract-incomes/?contract=${contractId}`);
+    return response.results || [];
+  },
+
+  /**
+   * Create a new contract income
+   */
+  async createContractIncome(data: Partial<ContractIncome>): Promise<ContractIncome> {
+    return apiClient.post<ContractIncome>('/contract-incomes/', data);
+  },
+
+  /**
+   * Update a contract income
+   */
+  async updateContractIncome(incomeId: number, data: Partial<ContractIncome>): Promise<ContractIncome> {
+    return apiClient.patch<ContractIncome>(`/contract-incomes/${incomeId}/`, data);
+  },
+
+  /**
+   * Delete a contract income
+   */
+  async deleteContractIncome(incomeId: number): Promise<void> {
+    return apiClient.delete(`/contract-incomes/${incomeId}/`);
+  },
+
+  // ============================================================
+  // FINANCIAL SUMMARY
+  // ============================================================
+
+  /**
+   * Get financial summary for a contract
+   */
+  async getContractFinancialSummary(contractId: number | string): Promise<ContractFinancialSummary> {
+    return apiClient.get<ContractFinancialSummary>(`/contract-financials/summary/?contract_id=${contractId}`);
+  },
+
+  /**
+   * Get costs breakdown by type for a contract
+   */
+  async getContractCostBreakdown(contractId: number | string): Promise<ContractCostBreakdown[]> {
+    return apiClient.get<ContractCostBreakdown[]>(`/contract-financials/costs_breakdown/?contract_id=${contractId}`);
+  },
+
+  // ============================================================
+  // TEMPLATE EDITOR
+  // ============================================================
+
+  /**
+   * Get PDF preview URL for a contract
+   */
+  getPreviewPdfUrl(contractId: number | string, templateCategory?: string): string {
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+    let url = `${baseUrl}/contracts/${contractId}/preview_pdf/`;
+    if (templateCategory) {
+      url += `?template_category=${templateCategory}`;
+    }
+    return url;
+  },
+
+  /**
+   * Save template configuration for a contract
+   */
+  async saveContractTemplate(contractId: number | string, templateData: Record<string, unknown>, templateCategory: string): Promise<{
+    success: boolean;
+    message: string;
+    template_id: string;
+    contract_id: number;
+  }> {
+    return apiClient.post(`/contracts/${contractId}/save_template/`, {
+      template_data: templateData,
+      template_category: templateCategory
+    });
+  },
+
+  /**
+   * Get template configuration for a contract
+   */
+  async getContractTemplateConfig(contractId: number | string): Promise<{
+    success: boolean;
+    template_data: Record<string, unknown>;
+    template_category: string;
+    contract_id: number;
+    has_custom_template: boolean;
+  }> {
+    return apiClient.get(`/contracts/${contractId}/template_config/`);
+  },
 };
 
+// ============================================================
+// ADDITIONAL INTERFACES
+// ============================================================
+
+export interface ContractCost {
+  id: number;
+  contract: number;
+  cost_type: 'FLIGHT' | 'ACCOMMODATION' | 'MEALS' | 'CAR_HIRE' | 'VISA' | 'AUDITORS_FEE' | 'BD_FEE' | 'OTHERS';
+  cost_type_display?: string;
+  description: string;
+  tentative_amount: string | number;
+  actual_amount?: string | number | null;
+  currency: string;
+  date_incurred?: string;
+  notes?: string;
+  variance?: string | number | null;
+  created_by?: number;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContractIncome {
+  id: number;
+  contract: number;
+  description: string;
+  amount: string | number;
+  currency: string;
+  date_received: string;
+  payment_method?: 'BANK_TRANSFER' | 'CHEQUE' | 'CASH' | 'MOBILE_MONEY' | 'CREDIT_CARD' | 'OTHER';
+  payment_method_display?: string;
+  reference?: string;
+  notes?: string;
+  created_by?: number;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContractFinancialSummary {
+  contract_id: string;
+  contract_value: string;
+  total_income: string;
+  total_tentative_cost: string;
+  total_actual_cost: string;
+  effective_cost: string;
+  net_profit: string;
+  margin_percentage: string;
+  currency: string;
+}
+
+export interface ContractCostBreakdown {
+  cost_type: string;
+  cost_type_display: string;
+  tentative_total: string;
+  actual_total: string;
+  item_count: number;
+}
+
+export const COST_TYPE_OPTIONS = [
+  { value: 'FLIGHT', label: 'Flight' },
+  { value: 'ACCOMMODATION', label: 'Accommodation' },
+  { value: 'MEALS', label: 'Meals' },
+  { value: 'CAR_HIRE', label: 'Car Hire' },
+  { value: 'VISA', label: 'Visa' },
+  { value: 'AUDITORS_FEE', label: 'Auditors Fee' },
+  { value: 'BD_FEE', label: 'BD Fee' },
+  { value: 'OTHERS', label: 'Others' },
+];
+
+export const PAYMENT_METHOD_OPTIONS = [
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'CHEQUE', label: 'Cheque' },
+  { value: 'CASH', label: 'Cash' },
+  { value: 'MOBILE_MONEY', label: 'Mobile Money' },
+  { value: 'CREDIT_CARD', label: 'Credit Card' },
+  { value: 'OTHER', label: 'Other' },
+];

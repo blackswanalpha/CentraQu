@@ -12,6 +12,7 @@ import { TemplateInfoModal } from "@/components/TemplateBuilder/TemplateInfoModa
 import { PreviewModal } from "@/components/TemplateBuilder/PreviewModal";
 import { generatePDF } from "@/components/TemplateBuilder/pdfGenerator";
 import { createServiceContractTemplate } from "@/components/TemplateBuilder/exampleTemplates";
+import { createISO9001CertificationContract } from "@/components/TemplateBuilder/ContractTemplates";
 import {
     Template,
     TemplatePage,
@@ -29,6 +30,7 @@ export default function TemplateBuilderPage() {
     const searchParams = useSearchParams();
     const templateId = searchParams.get('id');
     const contractData = searchParams.get('contract');
+    const templateType = searchParams.get('type');
 
     const [template, setTemplate] = useState<Template>({
         title: "Untitled Template",
@@ -60,6 +62,11 @@ export default function TemplateBuilderPage() {
     useEffect(() => {
         if (templateId) {
             loadTemplate(templateId);
+        } else if (templateType === 'certification-contract') {
+            const contractTemplate = createISO9001CertificationContract();
+            const { id, ...templateWithoutId } = contractTemplate;
+            setTemplate(templateWithoutId);
+            setShowInfoModal(false);
         } else if (contractData) {
             try {
                 const contractTemplate = JSON.parse(decodeURIComponent(contractData));
@@ -70,7 +77,7 @@ export default function TemplateBuilderPage() {
                 console.error("Error parsing contract data:", error);
             }
         }
-    }, [templateId, contractData]);
+    }, [templateId, contractData, templateType]);
 
     const loadTemplate = async (id: string) => {
         try {

@@ -10,7 +10,7 @@ export default function Home() {
             <div className="size-10 text-primary">
               <Shield className="h-10 w-10" />
             </div>
-            <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-[-0.015em]">AssureHub</h2>
+            <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-[-0.015em]">CentraQu</h2>
           </div>
           
           <div className="w-full flex flex-col items-center p-6 sm:p-8 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -19,7 +19,7 @@ export default function Home() {
             </div>
             
             <div className="flex flex-col mb-6">
-              <p className="text-slate-900 dark:text-white text-[28px] font-bold leading-tight tracking-[-0.015em]">Audit Management Platform</p>
+              <p className="text-slate-900 dark:text-white text-[28px] font-bold leading-tight tracking-[-0.015em]">CentraQu Management Platform</p>
               <p className="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal">Comprehensive audit certification and consulting solutions</p>
             </div>
             
@@ -40,7 +40,7 @@ export default function Home() {
             
             <div className="mt-6 text-center">
               <p className="text-slate-500 dark:text-slate-400 text-xs font-normal leading-normal">
-                © 2025 AssureHub. All rights reserved.
+                © 2025 CentraQu. All rights reserved.
               </p>
             </div>
           </div>

@@ -215,7 +215,7 @@ export default function SetupWizardPage() {
               <div className="mb-4 text-5xl text-success">✓</div>
               <h3 className="mb-2 font-semibold text-success text-lg">Setup Complete!</h3>
               <p className="text-sm text-gray-6">
-                Your audit management platform is ready. Here's what we've set up:
+                Your CentraQu management platform is ready. Here's what we've set up:
               </p>
               <ul className="mt-4 space-y-2 text-sm text-dark text-left">
                 <li>✓ Company profile configured</li>

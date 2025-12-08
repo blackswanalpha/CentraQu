@@ -24,7 +24,7 @@ export default function SetupCompletePage() {
 
         <h1 className="mb-2 text-3xl font-bold text-dark">Setup Complete!</h1>
         <p className="mb-8 text-gray-6">
-          Your audit management platform is ready. Here's what we've set up:
+          Your CentraQu management platform is ready. Here's what we've set up:
         </p>
 
         <div className="mb-8 space-y-3 text-left">

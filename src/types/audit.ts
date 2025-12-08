@@ -4,41 +4,41 @@
  */
 
 // Audit Status Types
-export type AuditStatus = 
-  | "scheduled" 
-  | "in-progress" 
-  | "completed" 
-  | "overdue" 
+export type AuditStatus =
+  | "scheduled"
+  | "in-progress"
+  | "completed"
+  | "overdue"
   | "cancelled";
 
 // Audit Type
-export type AuditType = 
-  | "stage-1" 
-  | "stage-2" 
+export type AuditType =
+  | "stage-1"
+  | "stage-2"
   | "certification"
   | "1st surveillance"
   | "2nd surveillance"
-  | "surveillance" 
-  | "recertification" 
-  | "gap-analysis" 
+  | "surveillance"
+  | "recertification"
+  | "gap-analysis"
   | "follow-up";
 
 // Certification Standards
-export type CertificationStandard = 
-  | "ISO 9001:2015" 
-  | "ISO 14001:2015" 
-  | "ISO 45001:2018" 
-  | "ISO 27001:2013" 
+export type CertificationStandard =
+  | "ISO 9001:2015"
+  | "ISO 14001:2015"
+  | "ISO 45001:2018"
+  | "ISO 27001:2013"
   | "ISO 22000:2018";
 
 // Finding Severity
 export type FindingSeverity = "major" | "minor" | "observation";
 
 // Finding Status
-export type FindingStatus = 
-  | "open" 
-  | "corrective-action-requested" 
-  | "verification-pending" 
+export type FindingStatus =
+  | "open"
+  | "corrective-action-requested"
+  | "verification-pending"
   | "closed";
 
 // Auditor
@@ -58,6 +58,14 @@ export interface Auditor {
 // Client Status
 export type ClientStatus = "active" | "inactive" | "at-risk" | "churned";
 
+// Client Site
+export interface ClientSite {
+  name?: string;
+  contact: string;
+  phone: string;
+  address?: string;
+}
+
 // Client
 export interface Client {
   id: string;
@@ -66,8 +74,11 @@ export interface Client {
   email: string;
   phone: string;
   address: string;
-  siteContact?: string;
-  sitePhone?: string;
+  website?: string;
+  currency?: string;
+  sites?: ClientSite[];
+  siteContact?: string; // Kept for backward compatibility
+  sitePhone?: string;   // Kept for backward compatibility
   status?: ClientStatus;
   industry?: string;
   certifications?: CertificationStandard[];

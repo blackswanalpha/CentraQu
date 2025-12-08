@@ -20,7 +20,24 @@ const CERTIFICATION_STANDARDS: CertificationStandard[] = [
   "ISO 22000:2018",
 ];
 
+const CERTIFICATION_DISPLAY: Record<string, string> = {
+  "ISO 9001:2015": "Quality Management System (ISO 9001)",
+  "ISO 14001:2015": "Environmental Management (ISO 14001)",
+  "ISO 45001:2018": "Occupational Health & Safety (ISO 45001)",
+  "ISO 27001:2013": "Information Security (ISO 27001)",
+  "ISO 22000:2018": "Food Safety Management (ISO 22000)",
+};
+
 const CLIENT_STATUSES: ClientStatus[] = ["active", "inactive", "at-risk", "churned"];
+
+const CURRENCY_CHOICES = [
+  { value: 'USD', label: 'US Dollar (USD)' },
+  { value: 'EUR', label: 'Euro (EUR)' },
+  { value: 'GBP', label: 'British Pound (GBP)' },
+  { value: 'KES', label: 'Kenyan Shilling (KES)' },
+  { value: 'TZS', label: 'Tanzanian Shilling (TZS)' },
+  { value: 'UGX', label: 'Ugandan Shilling (UGX)' },
+];
 
 export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormProps) {
   // Convert null values to empty strings to avoid React warnings
@@ -31,6 +48,9 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
     email: client.email ?? "",
     phone: client.phone ?? "",
     address: client.address ?? "",
+    website: client.website ?? "",
+    currency: client.currency ?? "USD",
+    sites: client.sites ?? [],
     siteContact: client.siteContact ?? "",
     sitePhone: client.sitePhone ?? "",
     industry: client.industry ?? "",
@@ -43,6 +63,9 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
     email: "",
     phone: "",
     address: "",
+    website: "",
+    currency: "USD",
+    sites: [],
     siteContact: "",
     sitePhone: "",
     status: "active",
@@ -70,18 +93,36 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
     validate,
   });
 
+  const addSite = () => {
+    const currentSites = form.values.sites || [];
+    form.handleChange("sites", [...currentSites, { name: "", contact: "", phone: "", address: "" }]);
+  };
+
+  const removeSite = (index: number) => {
+    const currentSites = form.values.sites || [];
+    form.handleChange("sites", currentSites.filter((_, i) => i !== index));
+  };
+
+  const updateSite = (index: number, field: keyof import("@/types/audit").ClientSite, value: string) => {
+    const currentSites = form.values.sites || [];
+    const newSites = [...currentSites];
+    newSites[index] = { ...newSites[index], [field]: value };
+    form.handleChange("sites", newSites);
+  };
+
   return (
-    <form onSubmit={form.handleSubmit} className="space-y-6">
+    <form onSubmit={form.handleSubmit} className="space-y-8 max-w-5xl mx-auto">
       {/* Basic Information */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-bold text-dark dark:text-white mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <h3 className="text-xl font-bold text-dark dark:text-white mb-6 flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary">domain</span>
           Basic Information
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormInput
-            label="Client Name"
-            placeholder="Enter client name"
+            label="Organization Name"
+            placeholder="Enter organization name"
             value={form.values.name}
             onChange={(e) => form.handleChange("name", e.target.value)}
             onBlur={() => form.handleBlur("name")}
@@ -97,7 +138,7 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
           />
 
           <FormInput
-            label="Contact Person"
+            label="Primary Contact"
             placeholder="Enter contact person name"
             value={form.values.contact}
             onChange={(e) => form.handleChange("contact", e.target.value)}
@@ -107,7 +148,7 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
           />
 
           <FormInput
-            label="Email"
+            label="Email Address"
             type="email"
             placeholder="Enter email address"
             value={form.values.email}
@@ -118,7 +159,7 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
           />
 
           <FormInput
-            label="Phone"
+            label="Phone Number"
             type="tel"
             placeholder="Enter phone number"
             value={form.values.phone}
@@ -129,68 +170,143 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
           />
 
           <FormInput
-            label="Address"
-            placeholder="Enter address"
-            value={form.values.address}
-            onChange={(e) => form.handleChange("address", e.target.value)}
-            onBlur={() => form.handleBlur("address")}
-            error={form.touched.address ? form.errors.address : undefined}
-            required
+            label="Website"
+            type="url"
+            placeholder="https://example.com"
+            value={form.values.website}
+            onChange={(e) => form.handleChange("website", e.target.value)}
           />
+
+          <div className="md:col-span-2">
+            <FormInput
+              label="Headquarters Address"
+              placeholder="Enter full address"
+              value={form.values.address}
+              onChange={(e) => form.handleChange("address", e.target.value)}
+              onBlur={() => form.handleBlur("address")}
+              error={form.touched.address ? form.errors.address : undefined}
+              required
+            />
+          </div>
         </div>
       </div>
 
       {/* Site Information */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-bold text-dark dark:text-white mb-4">
-          Site Information (Optional)
-        </h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-dark dark:text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">location_on</span>
+            Site Information
+          </h3>
+          <Button type="button" variant="secondary" onClick={addSite} size="sm">
+            <span className="material-symbols-outlined text-sm mr-1">add</span>
+            Add Site
+          </Button>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput
-            label="Site Contact"
-            placeholder="Enter site contact person"
-            value={form.values.siteContact}
-            onChange={(e) => form.handleChange("siteContact", e.target.value)}
-          />
+        <div className="space-y-6">
+          {form.values.sites?.map((site, index) => (
+            <div key={index} className="p-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 relative group">
+              <button
+                type="button"
+                onClick={() => removeSite(index)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <span className="material-symbols-outlined">delete</span>
+              </button>
 
-          <FormInput
-            label="Site Phone"
-            type="tel"
-            placeholder="Enter site phone number"
-            value={form.values.sitePhone}
-            onChange={(e) => form.handleChange("sitePhone", e.target.value)}
-          />
+              <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Site #{index + 1}</h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormInput
+                  label="Site Name"
+                  placeholder="e.g. West Coast Branch"
+                  value={site.name}
+                  onChange={(e) => updateSite(index, "name", e.target.value)}
+                />
+                <FormInput
+                  label="Site Contact"
+                  placeholder="Site manager name"
+                  value={site.contact}
+                  onChange={(e) => updateSite(index, "contact", e.target.value)}
+                />
+                <FormInput
+                  label="Site Phone"
+                  placeholder="Site phone number"
+                  value={site.phone}
+                  onChange={(e) => updateSite(index, "phone", e.target.value)}
+                />
+                <FormInput
+                  label="Site Address"
+                  placeholder="Site address"
+                  value={site.address}
+                  onChange={(e) => updateSite(index, "address", e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
+
+          {(!form.values.sites || form.values.sites.length === 0) && (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+              <p>No additional sites added.</p>
+              <button type="button" onClick={addSite} className="text-primary hover:underline mt-2 text-sm font-medium">
+                Add a site location
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Status & Certifications */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-bold text-dark dark:text-white mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <h3 className="text-xl font-bold text-dark dark:text-white mb-6 flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary">verified</span>
           Status & Certifications
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-dark dark:text-white">
-              Status
+              Client Status
             </label>
-            <select
-              value={form.values.status || "active"}
-              onChange={(e) => form.handleChange("status", e.target.value as ClientStatus)}
-              className="w-full rounded-lg border-2 border-stroke px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {CLIENT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={form.values.status || "active"}
+                onChange={(e) => form.handleChange("status", e.target.value as ClientStatus)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="at-risk">At Risk</option>
+                <option value="churned">Churned</option>
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+            </div>
           </div>
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-dark dark:text-white">
-              Health Score
+              Primary Currency
+            </label>
+            <div className="relative">
+              <select
+                value={form.values.currency || "USD"}
+                onChange={(e) => form.handleChange("currency", e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none"
+              >
+                {CURRENCY_CHOICES.map((currency) => (
+                  <option key={currency.value} value={currency.value}>
+                    {currency.label}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-dark dark:text-white">
+              Initial Health Score
             </label>
             <input
               type="number"
@@ -198,20 +314,32 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
               max="100"
               value={form.values.healthScore || 100}
               onChange={(e) => form.handleChange("healthScore", parseInt(e.target.value))}
-              className="w-full rounded-lg border-2 border-stroke px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-8 space-y-4">
           <label className="block text-sm font-medium text-dark dark:text-white">
-            Certifications
+            Active Certifications
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-4">
             {CERTIFICATION_STANDARDS.map((cert) => (
-              <label key={cert} className="flex items-center gap-2 cursor-pointer">
+              <label key={cert} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${form.values.certifications?.includes(cert)
+                  ? "border-primary bg-primary/5 dark:bg-primary/10"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}>
+                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${form.values.certifications?.includes(cert)
+                    ? "bg-primary border-primary"
+                    : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+                  }`}>
+                  {form.values.certifications?.includes(cert) && (
+                    <span className="material-symbols-outlined text-white text-sm">check</span>
+                  )}
+                </div>
                 <input
                   type="checkbox"
+                  className="hidden"
                   checked={form.values.certifications?.includes(cert) || false}
                   onChange={(e) => {
                     const certs = form.values.certifications || [];
@@ -224,9 +352,10 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
                       );
                     }
                   }}
-                  className="rounded"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{cert}</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {CERTIFICATION_DISPLAY[cert] || cert}
+                </span>
               </label>
             ))}
           </div>
@@ -234,12 +363,13 @@ export function ClientForm({ client, onSubmit, isLoading = false }: ClientFormPr
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 justify-end">
-        <Button variant="secondary" type="button">
+      <div className="flex gap-4 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+        <Button variant="secondary" type="button" className="min-w-[100px]">
           Cancel
         </Button>
-        <Button variant="primary" type="submit" loading={isLoading}>
-          {client ? "Update Client" : "Add Client"}
+        <Button variant="primary" type="submit" loading={isLoading} className="min-w-[140px]">
+          {client ? "Update Client" : "Create Client"}
+          <span className="material-symbols-outlined ml-2 text-lg">arrow_forward</span>
         </Button>
       </div>
     </form>

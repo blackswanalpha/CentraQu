@@ -54,7 +54,7 @@ export function MyOpportunities({
       transition={{ duration: 0.5 }}
       className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6"
     >
-      <motion.h3 
+      <motion.h3
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -62,7 +62,7 @@ export function MyOpportunities({
       >
         MY OPPORTUNITIES
       </motion.h3>
-      
+
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <motion.div
@@ -90,7 +90,7 @@ export function MyOpportunities({
       <div className="space-y-3">
         {teamMembers.map((member, index) => (
           <motion.div
-            key={member.name}
+            key={`${member.name}-${index}`}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 + (index * 0.1) }}
@@ -98,7 +98,7 @@ export function MyOpportunities({
             className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer"
           >
             <div className="flex items-center gap-3">
-              <motion.div 
+              <motion.div
                 initial={{ rotate: 0 }}
                 whileHover={{ rotate: 5 }}
                 className="p-2 bg-primary/10 rounded-full"
@@ -117,7 +117,7 @@ export function MyOpportunities({
                 </div>
               </div>
             </div>
-            <motion.span 
+            <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 + (index * 0.1) }}
@@ -128,7 +128,7 @@ export function MyOpportunities({
           </motion.div>
         ))}
       </div>
-      
+
       <motion.button
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

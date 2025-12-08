@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Certificate API Test</h1>
+    <button onclick="testApi()">Test Update Template API</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function testApi() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing API...';
+            
+            try {
+                const apiUrl = 'http://localhost:8000/api/v1/certifications/123/update_template/';
+                console.log('Testing URL:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Token fake_token_for_test'
+                    },
+                    body: JSON.stringify({
+                        elements: { test: 'data' },
+                        data: { test: 'value' }
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
+                output.textContent = `Status: ${response.status}\nResponse: ${responseText}`;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                output.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

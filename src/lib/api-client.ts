@@ -22,7 +22,7 @@ class APIClient {
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
-    
+
     // Load token from localStorage on initialization (client-side only)
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('auth_token');
@@ -113,6 +113,11 @@ class APIClient {
       });
 
       console.log('[APIClient] Response status:', response.status);
+
+      // Handle 204 No Content explicitly
+      if (response.status === 204) {
+        return null as T;
+      }
 
       // Parse response - check content type first
       const contentType = response.headers.get('content-type');
@@ -235,7 +240,7 @@ class APIClient {
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
     });
   }
 
@@ -245,7 +250,7 @@ class APIClient {
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
     });
   }
 

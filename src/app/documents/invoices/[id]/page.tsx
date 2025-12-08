@@ -49,7 +49,7 @@ export default function InvoiceDetailPage({
     bankDetails: {
       bankName: "KCB Bank Kenya",
       accountNumber: "1234567890",
-      accountName: "AssureHub Certification Services Ltd",
+      accountName: "CentraQu Certification Services Ltd",
       swiftCode: "KCBLKENX"
     },
     paymentHistory: [],
@@ -174,13 +174,13 @@ export default function InvoiceDetailPage({
                 <div className="flex justify-between items-start mb-8">
                   <div>
                     <div className="text-primary font-bold text-2xl mb-2">
-                      AssureHub Certification Services
+                      CentraQu Certification Services
                     </div>
                     <div className="text-gray-600 text-sm">
                       <p>Accredited Certification Body</p>
                       <p>Registration No: CB-001-2024</p>
                       <p>P.O. Box 12345-00100, Nairobi, Kenya</p>
-                      <p>Email: invoices@assurehub.co.ke</p>
+                      <p>Email: invoices@centraqu.co.ke</p>
                       <p>Phone: +254 700 000 000</p>
                     </div>
                   </div>
@@ -289,7 +289,7 @@ export default function InvoiceDetailPage({
 
                 {/* Footer */}
                 <div className="text-center text-xs text-gray-500 border-t border-gray-200 pt-4">
-                  <p>Thank you for choosing AssureHub Certification Services.</p>
+                  <p>Thank you for choosing CentraQu Certification Services.</p>
                   <p>This invoice was generated on {formatDate(invoiceData.createdDate)} by {invoiceData.createdBy}</p>
                 </div>
               </div>

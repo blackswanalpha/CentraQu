@@ -35,7 +35,25 @@ interface CertificationStats {
  */
 function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("auth_token");
+  
+  // Try localStorage first
+  let token = localStorage.getItem("auth_token");
+  
+  // If no token in localStorage, try to get from cookies as fallback
+  if (!token) {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'auth_token' && value) {
+        token = value;
+        // Store back in localStorage for future use
+        localStorage.setItem("auth_token", token);
+        break;
+      }
+    }
+  }
+  
+  return token;
 }
 
 /**
@@ -43,10 +61,27 @@ function getAuthToken(): string | null {
  */
 function getAuthHeaders(): HeadersInit {
   const token = getAuthToken();
+  if (!token) {
+    console.warn('[CertificationAPI] No authentication token found. Some requests may fail.');
+  }
   return {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Token ${token}` }),
   };
+}
+
+/**
+ * Helper function to check if an ID exists as a template
+ */
+async function isTemplateId(id: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/certificate-templates/${id}/`, {
+      headers: getAuthHeaders(),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -89,7 +124,14 @@ export async function getCertification(id: string): Promise<Certification> {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch certification");
+    // If 404, check if this might be a template ID being used incorrectly
+    if (response.status === 404) {
+      const isTemplate = await isTemplateId(id);
+      if (isTemplate) {
+        throw new Error(`ID "${id}" is a certificate template, not a certification. This suggests a navigation error. Expected a certification UUID.`);
+      }
+    }
+    throw new Error(`Failed to fetch certification: ${response.status} ${response.statusText}`);
   }
 
   return response.json();

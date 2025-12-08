@@ -327,8 +327,8 @@ export class PDFGenerator {
                 pdf.setProperties({
                     title: page.title,
                     subject: 'Template Export',
-                    author: 'AssureHub',
-                    creator: 'AssureHub Template Builder',
+                    author: 'CentraQu',
+                    creator: 'CentraQu Template Builder',
                 });
             }
 

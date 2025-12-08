@@ -1,4 +1,4 @@
-// PDF Preview Component for Certificate
+// PDF Preview Component for Certificate - Matches Certificate Editor Template
 "use client";
 
 import React, { useRef } from 'react';
@@ -19,10 +19,166 @@ interface CertificatePreviewProps {
         leadAuditor?: string;
     };
     onClose: () => void;
+    elements?: any[];
 }
 
-export function CertificatePreview({ certificateData, onClose }: CertificatePreviewProps) {
+export function CertificatePreview({ certificateData, onClose, elements: propElements }: CertificatePreviewProps) {
     const printRef = useRef<HTMLDivElement>(null);
+
+    // Define the exact same elements structure as the Certificate Editor
+    // Use propElements if available, otherwise use default
+    const elements = propElements || [
+        {
+            id: 'header-image',
+            type: 'image',
+            content: '/img/5.png',
+            x: 50,
+            y: 50,
+            width: 492,
+            height: 60,
+            style: { objectFit: 'contain' }
+        },
+        {
+            id: 'title',
+            type: 'text',
+            content: 'Certificate of Registration',
+            x: 50,
+            y: 130,
+            width: 492,
+            height: 40,
+            style: { fontSize: '28px', fontWeight: 'bold', textAlign: 'center' }
+        },
+        {
+            id: 'certification-body',
+            type: 'text',
+            content: 'AceQu International Ltd – UK Certifies that the Management System of the above organisation has been audited and found to be in accordance with the requirements of the management system standards detailed below:',
+            x: 50,
+            y: 190,
+            width: 492,
+            height: 60,
+            style: { fontSize: '14px', textAlign: 'center', lineHeight: '1.5' }
+        },
+        {
+            id: 'issued-to',
+            type: 'text',
+            content: 'This certificate is issued to',
+            x: 50,
+            y: 270,
+            width: 492,
+            height: 20,
+            style: { fontSize: '14px', textAlign: 'center' }
+        },
+        {
+            id: 'client-name',
+            type: 'text',
+            content: certificateData.clientName,
+            x: 50,
+            y: 300,
+            width: 492,
+            height: 30,
+            style: { fontSize: '20px', fontWeight: 'bold', textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '10px' }
+        },
+        {
+            id: 'scope-label',
+            type: 'text',
+            content: 'Scope of certification',
+            x: 50,
+            y: 350,
+            width: 240,
+            height: 20,
+            style: { fontSize: '12px', fontWeight: 'bold' }
+        },
+        {
+            id: 'scope-content',
+            type: 'text',
+            content: certificateData.scope,
+            x: 50,
+            y: 375,
+            width: 240,
+            height: 60,
+            style: { fontSize: '12px', lineHeight: '1.4' }
+        },
+        {
+            id: 'scope-work-label',
+            type: 'text',
+            content: 'Scope of work',
+            x: 300,
+            y: 350,
+            width: 240,
+            height: 20,
+            style: { fontSize: '12px', fontWeight: 'bold' }
+        },
+        {
+            id: 'scope-work-content',
+            type: 'text',
+            content: certificateData.scope,
+            x: 300,
+            y: 375,
+            width: 240,
+            height: 60,
+            style: { fontSize: '12px', lineHeight: '1.4' }
+        },
+        {
+            id: 'cert-number',
+            type: 'text',
+            content: `Certification Number: ${certificateData.certificateNumber}`,
+            x: 50,
+            y: 460,
+            width: 240,
+            height: 20,
+            style: { fontSize: '11px' }
+        },
+        {
+            id: 'orig-reg-date',
+            type: 'text',
+            content: `Date of original registration: ${certificateData.originalRegistrationDate}`,
+            x: 300,
+            y: 460,
+            width: 240,
+            height: 20,
+            style: { fontSize: '11px' }
+        },
+        {
+            id: 'issue-date',
+            type: 'text',
+            content: `Date of certificate: ${certificateData.issueDate}`,
+            x: 50,
+            y: 485,
+            width: 240,
+            height: 20,
+            style: { fontSize: '11px' }
+        },
+        {
+            id: 'expiry-date',
+            type: 'text',
+            content: `Date of certificate expiry: ${certificateData.expiryDate}`,
+            x: 300,
+            y: 485,
+            width: 240,
+            height: 20,
+            style: { fontSize: '11px' }
+        },
+        {
+            id: 'footer-company',
+            type: 'text',
+            content: 'AceQu International Ltd, 168 City Road, Cardiff, Wales, CF24 3JE, United Kingdom',
+            x: 50,
+            y: 550,
+            width: 492,
+            height: 20,
+            style: { fontSize: '10px', textAlign: 'center' }
+        },
+        {
+            id: 'footer-disclaimer',
+            type: 'text',
+            content: 'This certificate is the property of AceQu International Limited and should be returned back upon request.\nThe certificate cannot be transferred and is valid for the client, address and scope stated above.',
+            x: 50,
+            y: 575,
+            width: 492,
+            height: 40,
+            style: { fontSize: '9px', textAlign: 'center', lineHeight: '1.3' }
+        }
+    ];
 
     const handlePrint = () => {
         if (printRef.current) {
@@ -36,42 +192,36 @@ export function CertificatePreview({ certificateData, onClose }: CertificatePrev
             margin: 0; 
             padding: 20px; 
             background: white;
+            color: #000;
           }
           .certificate-container {
-            max-width: 800px;
+            width: 595px;
+            height: 842px;
             margin: 0 auto;
-            border: 3px solid #1e40af;
-            padding: 40px;
+            position: relative;
+            background: white;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
           }
-          .header-img { 
-            width: 100%; 
-            max-height: 100px; 
-            object-fit: contain; 
-            margin-bottom: 30px; 
+          .element {
+            position: absolute;
+            overflow: hidden;
+            word-wrap: break-word;
           }
-          .text-center { text-align: center; }
-          .primary-color { color: #1e40af; }
-          .font-bold { font-weight: bold; }
-          .text-2xl { font-size: 24px; }
-          .text-3xl { font-size: 30px; }
-          .text-lg { font-size: 18px; }
-          .text-sm { font-size: 14px; }
-          .text-xs { font-size: 12px; }
-          .mb-2 { margin-bottom: 8px; }
-          .mb-4 { margin-bottom: 16px; }
-          .mb-8 { margin-bottom: 32px; }
-          .mt-2 { margin-top: 8px; }
-          .mt-4 { margin-top: 16px; }
-          .border-b-2 { border-bottom: 2px solid #d1d5db; padding-bottom: 10px; }
-          .border-primary { border-color: #1e40af; }
-          .grid { display: grid; }
-          .grid-cols-2 { grid-template-columns: 1fr 1fr; }
-          .gap-4 { gap: 16px; }
-          .bg-gray-50 { background-color: #f9fafb; }
-          .p-2 { padding: 8px; }
+          .element img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
           @media print {
-            body { padding: 0; }
-            .certificate-container { border: none; }
+            body { padding: 0; margin: 0; }
+            .certificate-container { 
+              width: 210mm; 
+              height: 297mm; 
+              border: none; 
+              margin: 0;
+              padding: 0;
+            }
           }
         `);
                 printWindow.document.write('</style></head><body>');
@@ -121,105 +271,44 @@ export function CertificatePreview({ certificateData, onClose }: CertificatePrev
                     </div>
                 </div>
 
-                {/* Certificate Content */}
+                {/* Certificate Content - Matches Certificate Editor exactly */}
                 <div className="p-8">
                     <div ref={printRef}>
-                        <div className="bg-white border-2 border-gray-200 rounded-lg p-8 certificate-container">
-                            {/* Header Image */}
-                            <div className="mb-8">
-                                <img
-                                    src="/img/5.png"
-                                    alt="Certification Header"
-                                    className="w-full h-auto max-h-24 object-contain header-img"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                            </div>
-
-                            {/* Certification Body */}
-                            <div className="text-center mb-8">
-                                <div className="text-primary-color font-bold text-2xl mb-2">
-                                    {certificateData.certificationBody || "AssureHub Certification Body"}
-                                </div>
-                                <div className="text-gray-600 text-sm">Accredited Certification Body</div>
-                                <div className="border-t-2 border-primary-color w-32 mx-auto mt-4"></div>
-                            </div>
-
-                            {/* Certificate Title */}
-                            <div className="text-center mb-8">
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">CERTIFICATE</h1>
-                                <p className="text-lg text-gray-600">of Conformity to Management System Standard</p>
-                            </div>
-
-                            {/* Certificate Body */}
-                            <div className="space-y-6">
-                                <div className="text-center">
-                                    <p className="text-gray-700 mb-4">This is to certify that the management system of:</p>
-                                    <div className="border-b-2 border-primary-color pb-2 mb-4 inline-block min-w-[400px]">
-                                        <p className="text-xl font-bold text-gray-800">{certificateData.clientName}</p>
+                        <div className="border border-gray-300 bg-white shadow-lg rounded-lg overflow-hidden">
+                            <div
+                                className="relative bg-white certificate-container"
+                                style={{ width: '595px', height: '842px', margin: '0 auto' }}
+                            >
+                                {elements.map((element) => (
+                                    <div
+                                        key={element.id}
+                                        className="absolute element"
+                                        style={{
+                                            left: element.x,
+                                            top: element.y,
+                                            width: element.width,
+                                            height: element.height,
+                                            ...element.style
+                                        }}
+                                    >
+                                        {element.type === 'image' ? (
+                                            <img
+                                                src={element.content}
+                                                alt="Certificate element"
+                                                className="w-full h-full object-contain"
+                                                draggable={false}
+                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            <div
+                                                className="w-full h-full overflow-hidden"
+                                                style={{ whiteSpace: 'pre-wrap' }}
+                                            >
+                                                {element.content}
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-2">{certificateData.location}</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="bg-gray-50 p-2">
-                                        <span className="font-semibold">Location:</span>
-                                        <span className="ml-2">{certificateData.location}</span>
-                                    </div>
-                                    <div className="bg-gray-50 p-2">
-                                        <span className="font-semibold">Registration No:</span>
-                                        <span className="ml-2">{certificateData.registrationNumber}</span>
-                                    </div>
-                                </div>
-
-                                <div className="text-center">
-                                    <p className="text-gray-700 mb-2">has been assessed and found to conform to the requirements of:</p>
-                                    <div className="font-semibold text-lg text-primary-color mb-4">
-                                        {certificateData.standard}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <span className="font-semibold">Scope:</span>
-                                    <p className="mt-2 text-gray-700">{certificateData.scope}</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="bg-gray-50 p-2">
-                                        <strong className="block">Certificate Number:</strong>
-                                        <p className="mt-1">{certificateData.certificateNumber}</p>
-                                    </div>
-                                    <div className="bg-gray-50 p-2">
-                                        <strong className="block">Date of original registration:</strong>
-                                        <p className="mt-1">{new Date(certificateData.originalRegistrationDate).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="bg-gray-50 p-2">
-                                        <strong className="block">Date of certificate (Issue):</strong>
-                                        <p className="mt-1">{new Date(certificateData.issueDate).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="bg-gray-50 p-2">
-                                        <strong className="block">Date of certificate expiry:</strong>
-                                        <p className="mt-1">{new Date(certificateData.expiryDate).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Certificate Footer */}
-                            <div className="mt-12 grid grid-cols-2 gap-8 text-center text-sm">
-                                <div>
-                                    <div className="border-t border-gray-400 w-32 mx-auto mb-2"></div>
-                                    <p className="font-semibold">Lead Auditor</p>
-                                    <p>{certificateData.leadAuditor || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <div className="border-t border-gray-400 w-32 mx-auto mb-2"></div>
-                                    <p className="font-semibold">Certification Manager</p>
-                                    <p>John Roberts</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-8 text-center text-xs text-gray-500">
-                                <p>This certificate is valid only when accompanied by a valid surveillance audit report.</p>
-                                <p>The validity of this certificate is subject to satisfactory surveillance audits.</p>
+                                ))}
                             </div>
                         </div>
                     </div>

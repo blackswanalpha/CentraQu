@@ -147,6 +147,15 @@ class CertificateService {
   }
 
   async createTemplate(data: CreateTemplateData): Promise<CertificateTemplate> {
+    // Validation to prevent common errors
+    if (!data.name || !data.template_file) {
+      throw new Error(
+        `Certificate template creation requires 'name' and 'template_file'. ` +
+        `Missing: ${!data.name ? 'name ' : ''}${!data.template_file ? 'template_file' : ''}. ` +
+        `If you're trying to create a contract template, use the contract template service instead.`
+      );
+    }
+
     const formData = new FormData();
     
     formData.append('name', data.name);
@@ -161,6 +170,26 @@ class CertificateService {
   }
 
   async updateTemplate(id: string, data: UpdateTemplateData): Promise<CertificateTemplate> {
+    // Validation to prevent empty updates
+    const hasValidData = !!(
+      data.name ||
+      data.description ||
+      data.iso_standard ||
+      data.template_type ||
+      data.template_file ||
+      data.variables ||
+      data.is_default !== undefined ||
+      data.is_active !== undefined
+    );
+
+    if (!hasValidData) {
+      throw new Error(
+        `Cannot update certificate template: No valid data provided. ` +
+        `At least one field must be specified: name, description, iso_standard, ` +
+        `template_type, template_file, variables, is_default, or is_active.`
+      );
+    }
+
     const formData = new FormData();
     
     if (data.name) formData.append('name', data.name);
@@ -171,6 +200,8 @@ class CertificateService {
     if (data.variables) formData.append('variables', JSON.stringify(data.variables));
     if (data.is_default !== undefined) formData.append('is_default', data.is_default.toString());
     if (data.is_active !== undefined) formData.append('is_active', data.is_active.toString());
+
+    console.log(`[CertificateService] Updating template ${id} with ${formData.entries ? [...formData.entries()].length : 0} fields`);
 
     return apiClient.put(`/certificate-templates/${id}/`, formData);
   }

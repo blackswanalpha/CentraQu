@@ -110,7 +110,7 @@ export default function RegisterPage() {
         </div>
         <h1 className="mb-2 text-3xl font-bold text-dark">Create Account</h1>
         <p className="text-sm text-gray-6">
-          Join AssureHub to manage your audit and consulting projects
+          Join CentraQu to manage your audit and consulting projects
         </p>
       </div>
 

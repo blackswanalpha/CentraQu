@@ -1,7 +1,7 @@
 # Auditor Scheduler Component
 
 ## Overview
-The AuditorScheduler component provides a comprehensive time-based task management view specifically designed for auditors in the AssureHub platform. It integrates seamlessly with the existing dashboard and task management system.
+The AuditorScheduler component provides a comprehensive time-based task management view specifically designed for auditors in the CentraQu platform. It integrates seamlessly with the existing dashboard and task management system.
 
 ## Features
 
@@ -87,7 +87,7 @@ import { AuditorScheduler } from '@/components/Scheduler/auditor-scheduler';
 ### Component Architecture
 - Built with React functional components and hooks
 - Uses TypeScript for type safety
-- Follows existing AssureHub design patterns
+- Follows existing CentraQu design patterns
 - Integrates with existing task management types
 
 ### Dependencies
@@ -96,7 +96,7 @@ import { AuditorScheduler } from '@/components/Scheduler/auditor-scheduler';
 - Uses the same Task type definitions from `@/types/audit`
 
 ### Styling
-- Uses Tailwind CSS following AssureHub's design system
+- Uses Tailwind CSS following CentraQu's design system
 - Consistent with existing component styling
 - Supports both light and dark themes
 - Responsive design with mobile-first approach

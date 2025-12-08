@@ -5,7 +5,7 @@
  * All intake-related operations are now handled by the Django backend with PostgreSQL.
  */
 
-const DJANGO_API_URL = process.env.DJANGO_API_URL || 'http://localhost:8000/api/v1';
+const DJANGO_API_URL = process.env.DJANGO_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export interface DjangoIntakeLink {
   id: number;

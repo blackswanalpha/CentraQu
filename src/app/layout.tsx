@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { Metadata } from "next";
 import type { PropsWithChildren } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/components/Providers/toast-provider";
 import { Manrope } from "next/font/google";
 
 const manrope = Manrope({
@@ -29,7 +30,10 @@ export default function RootLayout({ children }: PropsWithChildren) {
         />
       </head>
       <body suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

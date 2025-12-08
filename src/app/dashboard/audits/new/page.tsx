@@ -79,7 +79,7 @@ export default function ScheduleNewAuditPage() {
     auditType: "INITIAL",
     scope: "", // From contract
     title: "",
-    description: "",
+    comments: "",
     startDate: "",
     endDate: "",
     duration: 3,
@@ -285,7 +285,7 @@ export default function ScheduleNewAuditPage() {
         iso_standard: 1, // Use first standard for now - could be enhanced
         audit_type: formData.auditType,
         title: formData.title,
-        description: formData.description,
+        description: formData.comments,
         scope: formData.scope,
         planned_start_date: formData.startDate,
         planned_end_date: formData.endDate,
@@ -646,17 +646,17 @@ export default function ScheduleNewAuditPage() {
                 )}
               </div>
 
-              {/* Description */}
+              {/* Comments */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Description
+                  Comments
                 </label>
                 <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={formData.comments}
+                  onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
                   rows={3}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  placeholder="Additional audit details..."
+                  placeholder="Add comments..."
                 />
               </div>
             </div>

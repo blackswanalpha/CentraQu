@@ -33,6 +33,9 @@ interface ContractFormData {
   // ISO Standards & Scope
   isoStandards: string[];
   scopeOfWork: string;
+  scopeOfCertification: string;
+  objectives: string;
+  templateCategory: 'CONTRACT_AGREEMENT_DEFAULT' | 'RENEWAL_CONTRACT_AGREEMENT_DEFAULT' | 'CUSTOM';
 
   // Audit Process
   stage1AuditDays: string;
@@ -119,6 +122,9 @@ export default function NewContractPage() {
 
     isoStandards: [],
     scopeOfWork: "",
+    scopeOfCertification: "",
+    objectives: "",
+    templateCategory: "CONTRACT_AGREEMENT_DEFAULT",
 
     stage1AuditDays: "1",
     stage1AuditDescription: "Reviews documentation, readiness, and preparedness.",
@@ -215,26 +221,53 @@ export default function NewContractPage() {
   const handleOpportunitySelect = (value: string, opportunity?: Opportunity) => {
     const selectedOpportunity = opportunity || opportunities.find(o => o.id.toString() === value);
     if (selectedOpportunity) {
-      const serviceTypeLabel = formData.serviceType === 'CERTIFICATION' ? 'Certification Agreement' :
-        formData.serviceType === 'CONSULTING' ? 'Consulting Agreement' :
-          formData.serviceType === 'SERVICE' ? 'Service Agreement' :
-            formData.serviceType === 'TRAINING' ? 'Training Agreement' :
-              formData.serviceType === 'MAINTENANCE' ? 'Maintenance Agreement' : 'Agreement';
+      // Map opportunity service_type to valid contract_type
+      // Opportunity uses: ISO_CERTIFICATION, CONSULTING, TRAINING, AUDIT, COMPLIANCE, RISK_ASSESSMENT
+      // Contract uses: SERVICE, CONSULTING, CERTIFICATION, TRAINING, MAINTENANCE
+      const mapServiceType = (oppServiceType: string | undefined): ContractFormData['serviceType'] => {
+        const mapping: Record<string, ContractFormData['serviceType']> = {
+          'ISO_CERTIFICATION': 'CERTIFICATION',
+          'CONSULTING': 'CONSULTING',
+          'TRAINING': 'TRAINING',
+          'AUDIT': 'SERVICE',
+          'COMPLIANCE': 'SERVICE',
+          'RISK_ASSESSMENT': 'CONSULTING',
+        };
+        return mapping[oppServiceType || ''] || 'CERTIFICATION';
+      };
+
+      const mappedServiceType = mapServiceType(selectedOpportunity.service_type);
+
+      const serviceTypeLabel = mappedServiceType === 'CERTIFICATION' ? 'Certification Agreement' :
+        mappedServiceType === 'CONSULTING' ? 'Consulting Agreement' :
+          mappedServiceType === 'SERVICE' ? 'Service Agreement' :
+            mappedServiceType === 'TRAINING' ? 'Training Agreement' :
+              mappedServiceType === 'MAINTENANCE' ? 'Maintenance Agreement' : 'Agreement';
 
       const suggestedTitle = `${selectedOpportunity.client_name || selectedOpportunity.client?.name} - ${serviceTypeLabel}`;
+
+      // Get client data from opportunity - auto-fill required fields
+      const client = selectedOpportunity.client;
+      const clientName = selectedOpportunity.client_name || client?.name || '';
+      const clientEmail = client?.email || `contact@example.com`;
+      const clientAddress = client?.address || `${clientName} - Address to be provided`;
+      const siteCovered = client?.address || clientName || 'Site to be confirmed';
 
       setFormData((prev) => ({
         ...prev,
         opportunityId: value,
-        clientOrganization: selectedOpportunity.client_name || selectedOpportunity.client?.name || "",
-        clientContactPerson: selectedOpportunity.client_name || selectedOpportunity.client?.name || "",
-        clientEmail: "", // Client details not available in opportunity object
-        clientAddress: "", // Client details not available in opportunity object
-        description: selectedOpportunity.description || "",
-        contractValue: selectedOpportunity.estimated_value?.toString() || "",
+        clientOrganization: clientName,
+        clientContactPerson: client?.contact_person || clientName,
+        clientEmail: clientEmail,
+        clientAddress: clientAddress,
+        clientTelephone: client?.phone || '',
+        clientWebsite: client?.website || '',
+        siteCovered: siteCovered,
+        description: selectedOpportunity.description || '',
+        contractValue: selectedOpportunity.estimated_value?.toString() || '',
         title: prev.title || suggestedTitle,
         currency: selectedOpportunity.currency || prev.currency,
-        serviceType: selectedOpportunity.service_type as ContractFormData['serviceType'] || prev.serviceType,
+        serviceType: mappedServiceType,
       }));
     }
   };
@@ -408,6 +441,8 @@ export default function NewContractPage() {
         // ISO Standards & Scope
         iso_standards: formData.isoStandards,
         scope_of_work: formData.scopeOfWork,
+        scope_of_certification: formData.scopeOfCertification,
+        objectives: formData.objectives,
 
         // Audit Process
         stage_1_audit_days: parseInt(formData.stage1AuditDays),
@@ -632,44 +667,30 @@ export default function NewContractPage() {
                       </label>
                     </div>
 
-                    {/* Template Selection - NEW */}
+                    {/* Sites Covered Section */}
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        Contract Template
+                        Sites Covered
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        Select a template that will be used to generate the contract document. The template includes pre-configured sections for policies, legal terms, and timeline conditions.
+                        Enter the physical locations/sites covered by this contract. This will appear in the contract document.
                       </p>
                       <label className="flex flex-col">
                         <p className="text-gray-900 dark:text-gray-200 text-base font-medium leading-normal pb-2">
-                          Select Template
+                          Site Locations
                         </p>
-                        <select
-                          name="selectedTemplateId"
-                          value={formData.selectedTemplateId}
+                        <textarea
+                          name="siteCovered"
+                          value={formData.siteCovered}
                           onChange={handleInputChange}
-                          className="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 dark:text-gray-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary h-14 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal"
-                        >
-                          <option value="">No template (manual configuration)</option>
-                          {templates.map((t: Template) => (
-                            <option key={t.id} value={t.id}>
-                              {t.title}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="e.g., Head Office: 123 Main St, Nairobi&#10;Branch: 456 Industrial Area, Mombasa"
+                          rows={3}
+                          className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 dark:text-gray-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:border-primary placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal"
+                        />
                       </label>
-                      {formData.selectedTemplateId && templates.find(t => t.id === parseInt(formData.selectedTemplateId)) && (
-                        <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {templates.find(t => t.id === formData.selectedTemplateId)?.title}
-                          </p>
-                          {templates.find(t => t.id === formData.selectedTemplateId)?.description && (
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {templates.find(t => t.id === formData.selectedTemplateId)?.description}
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        List all sites that will be audited under this contract. Each site should include address details.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -678,6 +699,45 @@ export default function NewContractPage() {
                     <h2 className="text-xl font-bold text-[#0d141b] dark:text-white">
                       Terms & Scope
                     </h2>
+
+                    {/* Template Category Selection */}
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10 p-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Contract Template Category
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        Select a template category to generate a pre-configured agreement document.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, templateCategory: 'CONTRACT_AGREEMENT_DEFAULT' }))}
+                          className={`flex flex-col items-start p-4 rounded-lg border-2 transition-all ${formData.templateCategory === 'CONTRACT_AGREEMENT_DEFAULT'
+                            ? 'border-primary bg-primary/10 dark:bg-primary/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                            }`}
+                        >
+                          <span className="font-medium text-gray-900 dark:text-white">Contract Agreement - Default</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Standard certification agreement for new clients
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, templateCategory: 'RENEWAL_CONTRACT_AGREEMENT_DEFAULT' }))}
+                          className={`flex flex-col items-start p-4 rounded-lg border-2 transition-all ${formData.templateCategory === 'RENEWAL_CONTRACT_AGREEMENT_DEFAULT'
+                            ? 'border-primary bg-primary/10 dark:bg-primary/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                            }`}
+                        >
+                          <span className="font-medium text-gray-900 dark:text-white">Renewal Contract - Default</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Recertification agreement for existing clients
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
                     {/* ISO Standards */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -755,6 +815,46 @@ export default function NewContractPage() {
                           onChange={handleInputChange}
                           rows={4}
                           placeholder="Describe the detailed scope of certification work..."
+                          className="form-textarea w-full resize-y rounded-lg text-[#0d141b] dark:text-slate-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#cfdbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary placeholder:text-[#4c739a] p-[15px] text-base font-normal leading-normal"
+                        ></textarea>
+                      </label>
+                    </div>
+
+                    {/* Scope of Certification */}
+                    <div>
+                      <label className="flex flex-col">
+                        <p className="text-[#0d141b] dark:text-slate-200 text-base font-medium leading-normal pb-2">
+                          Scope of Certification
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 pb-2">
+                          Define the boundaries, inclusions, and exclusions of the certification scope.
+                        </p>
+                        <textarea
+                          name="scopeOfCertification"
+                          value={formData.scopeOfCertification}
+                          onChange={handleInputChange}
+                          rows={4}
+                          placeholder="e.g., Design, development, and manufacturing of electronic components at the main facility. Excluding: Warehouse operations and distribution services."
+                          className="form-textarea w-full resize-y rounded-lg text-[#0d141b] dark:text-slate-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#cfdbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary placeholder:text-[#4c739a] p-[15px] text-base font-normal leading-normal"
+                        ></textarea>
+                      </label>
+                    </div>
+
+                    {/* Objectives */}
+                    <div>
+                      <label className="flex flex-col">
+                        <p className="text-[#0d141b] dark:text-slate-200 text-base font-medium leading-normal pb-2">
+                          Contract Objectives
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 pb-2">
+                          Define the key objectives and expected outcomes of this certification agreement.
+                        </p>
+                        <textarea
+                          name="objectives"
+                          value={formData.objectives}
+                          onChange={handleInputChange}
+                          rows={4}
+                          placeholder="e.g., Achieve ISO 9001:2015 certification within 6 months of contract commencement. Improve quality management system maturity and customer satisfaction."
                           className="form-textarea w-full resize-y rounded-lg text-[#0d141b] dark:text-slate-200 focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-[#cfdbe7] dark:border-slate-700 bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary placeholder:text-[#4c739a] p-[15px] text-base font-normal leading-normal"
                         ></textarea>
                       </label>

@@ -187,7 +187,7 @@ export default function CompanySettingsPage() {
                   </defs>
                 </svg>
               </div>
-              <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-[-0.015em]">AssureHub</h2>
+              <h2 className="text-slate-900 dark:text-white text-2xl font-bold leading-tight tracking-[-0.015em]">CentraQu</h2>
             </div>
             
             {/* Organization Profile Card */}

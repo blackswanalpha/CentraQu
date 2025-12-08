@@ -6,26 +6,39 @@ import { DashboardLayout } from "@/components/Layouts/dashboard-layout";
 import { ClientForm } from "@/components/Clients/client-form";
 import { Client } from "@/types/audit";
 import { clientService } from "@/services/client.service";
+import toast from "react-hot-toast";
 
 export default function AddClientPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (data: Client) => {
     setIsLoading(true);
-    setError(null);
 
     try {
       // Create client via backend API
       const newClient = await clientService.createClient(data);
       console.log("Client created successfully:", newClient);
 
+      toast.success("Client created successfully!");
+
       // Redirect to clients page
       router.push("/clients");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add client");
+    } catch (err: any) {
       console.error("Error adding client:", err);
+
+      // Extract error message from backend response if available
+      const errorMessage = err.response?.data?.error || err.message || "Failed to add client";
+
+      // If there are field-specific errors, show them
+      if (err.response?.data && typeof err.response.data === 'object' && !err.response.data.error) {
+        Object.entries(err.response.data).forEach(([field, messages]) => {
+          const msg = Array.isArray(messages) ? messages[0] : messages;
+          toast.error(`${field}: ${msg}`);
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -43,15 +56,6 @@ export default function AddClientPage() {
             Create a new client account and set up their audit profile
           </p>
         </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-900 dark:text-red-100">
-              ❌ {error}
-            </p>
-          </div>
-        )}
 
         {/* Form */}
         <ClientForm onSubmit={handleSubmit} isLoading={isLoading} />

@@ -154,6 +154,28 @@ export const NAV_DATA = [
     label: "MANAGEMENT",
     items: [
       {
+        title: "Clients",
+        icon: Icons.ClientsIcon,
+        items: [
+          {
+            title: "All Clients",
+            url: "/clients",
+          },
+          {
+            title: "Add Client",
+            url: "/clients/new",
+          },
+          {
+            title: "Intake Links",
+            url: "/clients/intake-links",
+          },
+          {
+            title: "Intake Submissions",
+            url: "/clients/intake-submissions",
+          },
+        ],
+      },
+      {
         title: "Business Development",
         icon: Icons.BusinessIcon,
         items: [
@@ -236,28 +258,6 @@ export const NAV_DATA = [
           {
             title: "Add Certification",
             url: "/certifications/new",
-          },
-        ],
-      },
-      {
-        title: "Clients",
-        icon: Icons.ClientsIcon,
-        items: [
-          {
-            title: "All Clients",
-            url: "/clients",
-          },
-          {
-            title: "Add Client",
-            url: "/clients/new",
-          },
-          {
-            title: "Intake Links",
-            url: "/clients/intake-links",
-          },
-          {
-            title: "Intake Submissions",
-            url: "/clients/intake-submissions",
           },
         ],
       },

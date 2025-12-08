@@ -700,7 +700,7 @@ Please prepare the following documents:
 We look forward to working with you.
 
 Best regards,
-AssureHub Audit Team"
+CentraQu Audit Team"
                     />
                   </div>
 

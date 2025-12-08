@@ -8,10 +8,8 @@ export default function ContractTemplatePage() {
     const router = useRouter();
 
     useEffect(() => {
-        // Create example contract and redirect to builder
-        const exampleTemplate = createServiceContractTemplate();
-        const templateData = encodeURIComponent(JSON.stringify(exampleTemplate));
-        router.push(`/template/builder?contract=${templateData}`);
+        // Redirect to builder with template type
+        router.push('/template/builder?type=certification-contract');
     }, [router]);
 
     return (

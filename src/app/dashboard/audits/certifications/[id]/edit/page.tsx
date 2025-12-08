@@ -29,16 +29,58 @@ export default function EditCertificationTemplatePage({
         const originalId = await resolvedParams.id;
         let targetTemplateId = originalId;
 
-        // Validate if 'id' is a valid UUID
-        if (!uuidRegex.test(originalId)) {
-          console.log(`ID ${originalId} is not a UUID, attempting to resolve as Audit ID...`);
+        // Always try to resolve as Certification ID first since we are in the certifications route
+        try {
+          console.log(`Attempting to resolve ID ${originalId} as Certification...`);
+          const certification = await certificateService.getCertification(originalId);
+          console.log("Found Certification:", certification);
+
+          if (certification.template) {
+            // Handle both object (populated) and primitive (ID only) template references
+            if (typeof certification.template === 'object' && 'id' in certification.template) {
+              targetTemplateId = certification.template.id;
+              console.log(`Resolved Template ID from Certification (Object): ${targetTemplateId}`);
+            } else {
+              targetTemplateId = String(certification.template);
+              console.log(`Resolved Template ID from Certification (ID): ${targetTemplateId}`);
+            }
+          } else if (certification.iso_standard) {
+            // If no template assigned, try to find default template for ISO Standard
+            const isoStandardId = typeof certification.iso_standard === 'object' ? certification.iso_standard.id : certification.iso_standard;
+
+            const templatesResponse = await certificateService.getTemplates({
+              iso_standard: isoStandardId,
+              is_default: true
+            });
+
+            if (templatesResponse.results && templatesResponse.results.length > 0) {
+              targetTemplateId = templatesResponse.results[0].id;
+              console.log(`Resolved Default Template ID for ISO ${isoStandardId}: ${targetTemplateId}`);
+            } else {
+              // Fallback: Try to find ANY template for this ISO standard
+              const anyTemplateResponse = await certificateService.getTemplates({
+                iso_standard: isoStandardId
+              });
+              if (anyTemplateResponse.results && anyTemplateResponse.results.length > 0) {
+                targetTemplateId = anyTemplateResponse.results[0].id;
+                console.log(`Resolved (Fallback) Template ID for ISO ${isoStandardId}: ${targetTemplateId}`);
+              } else {
+                throw new Error(`No templates found for ISO Standard ${isoStandardId}`);
+              }
+            }
+          } else {
+            throw new Error("Certification has no template and no ISO Standard assigned");
+          }
+        } catch (certErr) {
+          console.warn("Failed to resolve as Certification:", certErr);
+
+          // Fallback: Try Audit logic just in case the ID passed is an Audit ID
           try {
-            // 1. Try to fetch Audit
+            console.log(`Attempting fallback to resolve ID ${originalId} as Audit ID...`);
             const audit = await auditService.getAudit(originalId);
             console.log("Found Audit:", audit);
 
-            // 2. Try to find Certification for this Audit
-            // Strategy: Use certificate_number from audit to find the certification
+            // Try to find Certification for this Audit
             if (audit.certificate_number) {
               const certsResponse = await certificateService.getCertifications({
                 search: audit.certificate_number
@@ -46,46 +88,51 @@ export default function EditCertificationTemplatePage({
 
               if (certsResponse.results && certsResponse.results.length > 0) {
                 const certification = certsResponse.results[0];
-                if (certification.template && certification.template.id) {
-                  targetTemplateId = certification.template.id;
-                  console.log(`Resolved Template ID from Certification: ${targetTemplateId}`);
-                } else {
-                  console.log("Certification found but no template assigned, falling back to default.");
+                console.log("Found Certification via Audit:", certification);
+
+                if (certification.template) {
+                  if (typeof certification.template === 'object' && 'id' in certification.template) {
+                    targetTemplateId = certification.template.id;
+                  } else {
+                    targetTemplateId = String(certification.template);
+                  }
+                  console.log(`Resolved Template ID from Certification (via Audit): ${targetTemplateId}`);
+                } else if (certification.iso_standard) {
+                  // Default template logic
+                  const isoStandardId = typeof certification.iso_standard === 'object' ? certification.iso_standard.id : certification.iso_standard;
+                  const templatesResponse = await certificateService.getTemplates({
+                    iso_standard: isoStandardId,
+                    is_default: true
+                  });
+                  if (templatesResponse.results && templatesResponse.results.length > 0) {
+                    targetTemplateId = templatesResponse.results[0].id;
+                  } else {
+                    // Any template fallback
+                    const anyTemplateResponse = await certificateService.getTemplates({ iso_standard: isoStandardId });
+                    if (anyTemplateResponse.results && anyTemplateResponse.results.length > 0) {
+                      targetTemplateId = anyTemplateResponse.results[0].id;
+                    }
+                  }
                 }
               }
             }
 
-            // 3. If still no targetTemplateId (or it's still originalId), try to find default template via ISO Standard
+            // If we still don't have a template ID but found an audit, maybe we can use the audit's ISO standard directly
             if (targetTemplateId === originalId && audit.iso_standard) {
-              // Find default template for this ISO Standard
               const templatesResponse = await certificateService.getTemplates({
                 iso_standard: audit.iso_standard,
                 is_default: true
               });
-
               if (templatesResponse.results && templatesResponse.results.length > 0) {
                 targetTemplateId = templatesResponse.results[0].id;
-                console.log(`Resolved Default Template ID for ISO ${audit.iso_standard}: ${targetTemplateId}`);
-              } else {
-                // Fallback: Try to find ANY template for this ISO standard
-                const anyTemplateResponse = await certificateService.getTemplates({
-                  iso_standard: audit.iso_standard
-                });
-                if (anyTemplateResponse.results && anyTemplateResponse.results.length > 0) {
-                  targetTemplateId = anyTemplateResponse.results[0].id;
-                  console.log(`Resolved (Fallback) Template ID for ISO ${audit.iso_standard}: ${targetTemplateId}`);
-                } else {
-                  throw new Error(`No templates found for ISO Standard ${audit.iso_standard}`);
-                }
               }
-            } else if (targetTemplateId === originalId) {
-              throw new Error("Audit does not have an ISO Standard assigned and no certificate number found");
             }
-          } catch (err) {
-            console.warn("Failed to resolve template ID from Audit:", err);
-            setError("Could not resolve a valid template for this audit. Please ensure an ISO Standard is assigned and a template exists.");
-            setLoading(false);
-            return;
+
+          } catch (auditErr) {
+            console.warn("Audit fallback also failed:", auditErr);
+            // Final fallback: Assume it's a template ID
+            console.log(`Assuming ID ${originalId} is directly a Template ID`);
+            targetTemplateId = originalId;
           }
         }
 
@@ -115,7 +162,12 @@ export default function EditCertificationTemplatePage({
         }
       } catch (err) {
         console.error("Failed to fetch template:", err);
-        setError(`Failed to load template: ${err instanceof Error ? err.message : String(err)}`);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (errorMessage.includes("Not found")) {
+          setError(`Template not found. Please check if the ID '${resolvedParams.id}' is correct. If using an Audit ID, ensure the audit exists.`);
+        } else {
+          setError(`Failed to load template: ${errorMessage}`);
+        }
         setTemplateContent(`<!-- Error loading template. Please check console for details. -->`);
       } finally {
         setLoading(false);
@@ -173,29 +225,61 @@ export default function EditCertificationTemplatePage({
         throw new Error("No template ID available for saving");
       }
 
+      // Validate required fields before making API call
+      if (!templateDetails.name || !templateDetails.name.trim()) {
+        throw new Error("Template name is required and cannot be empty");
+      }
+
+      if (!templateContent || !templateContent.trim()) {
+        throw new Error("Template content is required and cannot be empty");
+      }
+
       // Convert HTML string to a File-like Blob
       const htmlBlob = new Blob([templateContent], { type: 'text/html' });
       const htmlFile = new File([htmlBlob], `${templateDetails.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`, { type: 'text/html' });
 
+      // Double-check that we have valid data before API call
       const updateData: UpdateTemplateData = {
         name: templateDetails.name,
-        description: templateDetails.description,
+        description: templateDetails.description || '',
         iso_standard: templateDetails.iso_standard?.id,
         template_type: 'html', // Assuming we are only editing HTML templates here
         template_file: htmlFile,
-        variables: templateDetails.variables,
-        is_active: templateDetails.is_active,
-        is_default: templateDetails.is_default,
+        variables: templateDetails.variables || {},
+        is_active: templateDetails.is_active ?? true,
+        is_default: templateDetails.is_default ?? false,
       };
+
+      console.log("Saving template with data:", {
+        name: updateData.name,
+        description: updateData.description,
+        iso_standard: updateData.iso_standard,
+        template_type: updateData.template_type,
+        has_template_file: !!updateData.template_file,
+        template_file_size: updateData.template_file?.size || 0
+      });
 
       await certificateService.updateTemplate(templateId, updateData);
       console.log("Template saved successfully!");
-      // Optionally show a success message
+      
+      // Show success message
+      alert("Template saved successfully!");
+      
       const originalId = await resolvedParams.id;
       router.push(`/dashboard/audits/certifications/${originalId}`);
     } catch (err) {
       console.error("Failed to save template:", err);
-      setError(`Failed to save template: ${err instanceof Error ? err.message : String(err)}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`Failed to save template: ${errorMessage}`);
+      
+      // Show user-friendly error
+      if (errorMessage.includes("name") && errorMessage.includes("required")) {
+        alert("Please provide a template name before saving.");
+      } else if (errorMessage.includes("template_file") && errorMessage.includes("required")) {
+        alert("Template content is required. Please add some content to the template.");
+      } else {
+        alert(`Failed to save template: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -254,6 +338,12 @@ export default function EditCertificationTemplatePage({
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
             >
               Cancel
+            </button>
+            <button 
+              onClick={() => router.push(`/dashboard/audits/certifications/${resolvedParams.id}`)}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900"
+            >
+              Use New Editor
             </button>
             <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-900">
               Preview

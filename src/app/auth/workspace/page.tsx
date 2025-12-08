@@ -133,30 +133,34 @@ export default function WorkspacePage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4"
               variants={containerVariants}
             >
-              {/* Card 1: Audit Co */}
+              {/* Card 1: AceQu International */}
               <motion.div
                 className="flex flex-col items-stretch justify-start rounded-xl border border-primary dark:border-primary/80 bg-white dark:bg-background-dark shadow-sm transition-all"
                 variants={cardVariants}
                 whileHover="hover"
               >
                 <div className="flex items-center gap-4 border-b border-slate-200 dark:border-slate-800 p-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                    <Building2 className="text-primary w-8 h-8" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white">
+                    <img
+                      src="https://www.acequ.com/wp-content/uploads/2021/03/AceQu-LOGO_2021-PDF.png"
+                      alt="AceQu International"
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <div className="flex flex-col items-start gap-1 flex-1">
                     <p className="text-slate-900 dark:text-slate-50 text-lg font-bold leading-tight tracking-[-0.015em]">
-                      Audit Co
+                      AceQu International
                     </p>
                     <p className="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">
                       Audit Practice
                     </p>
                   </div>
                   <motion.a
-                    href="https://www.centraqu.com"
+                    href="https://www.acequ.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors"
-                    aria-label="Visit Audit Co website"
+                    aria-label="Visit AceQu International website"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                   >
